@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── AUTH ───────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  phone         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts    Account[]
+  sessions    Session[]
+  members     HouseholdMember[]
+  invitesSent Invitation[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── HOGAR ──────────────────────────────
+
+model Household {
+  id        String   @id @default(cuid())
+  name      String
+  currency  String   @default("USD")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members      HouseholdMember[]
+  expenses     Expense[]
+  budgets      Budget[]
+  invitations  Invitation[]
+  subscription Subscription?
+}
+
+model HouseholdMember {
+  id           String   @id @default(cuid())
+  householdId  String
+  userId       String
+  role         Role     @default(MEMBER)
+  defaultShare Float    // 68.0 / 30.0 / 2.0 — debe sumar 100 entre todos
+  joinedAt     DateTime @default(now())
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  splits    ExpenseSplit[]
+
+  @@unique([householdId, userId])
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+// ─── INVITACIONES ───────────────────────
+
+model Invitation {
+  id          String       @id @default(cuid())
+  householdId String
+  invitedBy   String
+  email       String?
+  phone       String?
+  token       String       @unique @default(cuid())
+  status      InviteStatus @default(PENDING)
+  expiresAt   DateTime
+  createdAt   DateTime     @default(now())
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  inviter   User      @relation(fields: [invitedBy], references: [id])
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+}
+
+// ─── GASTOS ─────────────────────────────
+
+model Expense {
+  id               String   @id @default(cuid())
+  householdId      String
+  paidById         String   // HouseholdMember.id de quien pagó
+  description      String
+  amount           Float
+  categoryId       String?
+  useDefaultShares Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  household Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  splits    ExpenseSplit[]
+  category  Category?      @relation(fields: [categoryId], references: [id])
+}
+
+model ExpenseSplit {
+  id         String @id @default(cuid())
+  expenseId  String
+  memberId   String
+  percentage Float  // ej: 68.0
+  amount     Float  // calculado: expense.amount * percentage / 100
+
+  expense Expense         @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  member  HouseholdMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
+
+// ─── PRESUPUESTO ────────────────────────
+
+model Category {
+  id          String @id @default(cuid())
+  householdId String
+  name        String
+  icon        String @default("📦")
+  color       String @default("#6b6b72")
+
+  budgets  Budget[]
+  expenses Expense[]
+}
+
+model Budget {
+  id          String @id @default(cuid())
+  householdId String
+  categoryId  String
+  amount      Float
+  month       Int    // 1-12
+  year        Int    // 2026
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  category  Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, categoryId, month, year])
+}
+
+// ─── SUSCRIPCIÓN ────────────────────────
+
+model Subscription {
+  id               String    @id @default(cuid())
+  householdId      String    @unique
+  plan             Plan      @default(FREE)
+  status           SubStatus @default(TRIALING)
+  stripeCustomerId String?
+  stripeSubId      String?
+  trialEndsAt      DateTime?
+  currentPeriodEnd DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+}
+
+enum Plan {
+  FREE
+  STANDARD
+  PREMIUM
+}
+
+enum SubStatus {
+  TRIALING
+  ACTIVE
+  CANCELED
+  PAST_DUE
+}
