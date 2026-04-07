@@ -1,25 +1,17 @@
- 
 'use client'
 import { useState } from 'react'
-import { authClient } from '@/lib/auth-client'
-import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
-  const router = useRouter()
   const [loading, setLoading] = useState(false)
 
-  async function loginWithGoogle() {
+  function loginWithGoogle() {
     setLoading(true)
-    await authClient.signIn.social({
-      provider: 'google',
-      callbackURL: '/dashboard',
-    })
+    window.location.href = '/api/auth/sign-in/social?provider=google&callbackURL=/dashboard'
   }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', maxWidth: 430, margin: '0 auto' }}>
       
-      {/* Logo */}
       <div style={{ marginBottom: 48, textAlign: 'center' }}>
         <div style={{ fontFamily: 'var(--font-syne)', fontSize: 36, fontWeight: 800, letterSpacing: '-.03em', marginBottom: 8 }}>
           Hogar<span style={{ color: 'var(--lime-dk)' }}>Fi</span>
@@ -29,13 +21,11 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Card */}
       <div style={{ width: '100%', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, padding: '32px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ fontFamily: 'var(--font-syne)', fontSize: 20, fontWeight: 700, marginBottom: 8 }}>
           Entrar a tu hogar
         </div>
 
-        {/* Google */}
         <button
           onClick={loginWithGoogle}
           disabled={loading}
@@ -55,9 +45,7 @@ export default function LoginPage() {
           <div style={{ flex: 1, height: 1, background: 'var(--border)' }}/>
         </div>
 
-        {/* Magic link */}
         <EmailLogin />
-
       </div>
 
       <div style={{ marginTop: 24, fontSize: 12, color: 'var(--ink3)', textAlign: 'center' }}>
@@ -75,12 +63,16 @@ function EmailLogin() {
   async function sendMagicLink() {
     if (!email) return
     setLoading(true)
-    await authClient.signIn.magicLink({
-      email,
-      callbackURL: '/dashboard',
-    })
-    setSent(true)
-    setLoading(false)
+    try {
+      await fetch('/api/auth/sign-in/magic-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, callbackURL: '/dashboard' }),
+      })
+      setSent(true)
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (sent) return (
