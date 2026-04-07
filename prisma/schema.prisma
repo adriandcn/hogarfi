@@ -7,58 +7,67 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─── AUTH ───────────────────────────────
+// ─── BETTER AUTH ────────────────────────
 
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  phone         String?   @unique
-  emailVerified DateTime?
+model BetterAuthUser {
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean
   image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime
+  updatedAt     DateTime
 
-  accounts    Account[]
-  sessions    Session[]
+  sessions    BetterAuthSession[]
+  accounts    BetterAuthAccount[]
   members     HouseholdMember[]
   invitesSent Invitation[]
+
+  @@map("better_auth_user")
 }
 
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
+model BetterAuthSession {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      BetterAuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
+  @@map("better_auth_session")
 }
 
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
+model BetterAuthAccount {
+  id                    String   @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  BetterAuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("better_auth_account")
 }
 
-model VerificationToken {
+model BetterAuthVerification {
+  id         String    @id
   identifier String
-  token      String   @unique
-  expires    DateTime
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
 
-  @@unique([identifier, token])
+  @@map("better_auth_verification")
 }
 
 // ─── HOGAR ──────────────────────────────
@@ -82,11 +91,11 @@ model HouseholdMember {
   householdId  String
   userId       String
   role         Role     @default(MEMBER)
-  defaultShare Float    // 68.0 / 30.0 / 2.0 — debe sumar 100 entre todos
+  defaultShare Float
   joinedAt     DateTime @default(now())
 
-  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user      BetterAuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
   splits    ExpenseSplit[]
 
   @@unique([householdId, userId])
@@ -110,8 +119,8 @@ model Invitation {
   expiresAt   DateTime
   createdAt   DateTime     @default(now())
 
-  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  inviter   User      @relation(fields: [invitedBy], references: [id])
+  household Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  inviter   BetterAuthUser @relation(fields: [invitedBy], references: [id])
 }
 
 enum InviteStatus {
@@ -125,7 +134,7 @@ enum InviteStatus {
 model Expense {
   id               String   @id @default(cuid())
   householdId      String
-  paidById         String   // HouseholdMember.id de quien pagó
+  paidById         String
   description      String
   amount           Float
   categoryId       String?
@@ -142,8 +151,8 @@ model ExpenseSplit {
   id         String @id @default(cuid())
   expenseId  String
   memberId   String
-  percentage Float  // ej: 68.0
-  amount     Float  // calculado: expense.amount * percentage / 100
+  percentage Float
+  amount     Float
 
   expense Expense         @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   member  HouseholdMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
@@ -167,8 +176,8 @@ model Budget {
   householdId String
   categoryId  String
   amount      Float
-  month       Int    // 1-12
-  year        Int    // 2026
+  month       Int
+  year        Int
 
   household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   category  Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
