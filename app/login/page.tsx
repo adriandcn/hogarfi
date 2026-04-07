@@ -4,9 +4,25 @@ import { useState } from 'react'
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
 
-  function loginWithGoogle() {
+  async function loginWithGoogle() {
     setLoading(true)
-    window.location.href = '/api/auth/sign-in/social?provider=google&callbackURL=/dashboard'
+    try {
+      const res = await fetch('/api/auth/sign-in/social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: 'google',
+          callbackURL: '/dashboard',
+        }),
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      }
+    } catch (err) {
+      console.error(err)
+      setLoading(false)
+    }
   }
 
   return (
