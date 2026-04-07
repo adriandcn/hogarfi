@@ -7,7 +7,7 @@ const tabs = [
   { href: '/gastos', icon: '💳', label: 'Gastos' },
   { href: '/gastos/nuevo', icon: '➕', label: 'Agregar' },
   { href: '/presupuesto', icon: '📊', label: 'Presupuesto' },
-  { href: '/invitar', icon: '👥', label: 'Invitar' },
+  { href: '/reportes', icon: '📈', label: 'Reportes' },
 ]
 export default function BottomNav() {
   const pathname = usePathname()
