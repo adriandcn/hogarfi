@@ -143,8 +143,7 @@ export default function NuevoGastoPage() {
         </div>
       </div>
 
-      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 120 }}>
-
+      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 160 }}>
         {/* SCANNER AI */}
         <div
           onClick={() => !scanning && fileRef.current?.click()}
@@ -297,7 +296,7 @@ export default function NuevoGastoPage() {
       </div>
 
       {/* SUBMIT */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '16px 20px 30px', background: 'linear-gradient(to top, var(--bg) 70%, transparent)', maxWidth: 430, margin: '0 auto' }}>
+      <div style={{ position: 'fixed', bottom: 72, left: 0, right: 0, padding: '16px 20px', background: 'linear-gradient(to top, var(--bg) 70%, transparent)', maxWidth: 430, margin: '0 auto' }}>
         <button
           onClick={handleSubmit}
           disabled={!description || !amount || !sharesOk || saving}
