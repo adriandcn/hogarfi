@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 export default function OnboardingPage() {
@@ -7,25 +7,40 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [householdName, setHouseholdName] = useState('')
-  const [members, setMembers] = useState([
-    { name: '', share: 60 },
+  const [myName, setMyName] = useState('')
+  const [myShare, setMyShare] = useState(60)
+  const [otherMembers, setOtherMembers] = useState([
     { name: '', share: 40 },
   ])
 
-  const totalShare = members.reduce((s, m) => s + m.share, 0)
+  useEffect(() => {
+    // Obtener nombre del usuario logueado
+    fetch('/api/auth/get-session')
+      .then(r => r.json())
+      .then(data => {
+        if (data?.user?.name) setMyName(data.user.name.split(' ')[0])
+      })
+  }, [])
+
+  const allMembers = [
+    { name: myName, share: myShare },
+    ...otherMembers,
+  ]
+
+  const totalShare = allMembers.reduce((s, m) => s + m.share, 0)
   const sharesOk = Math.abs(totalShare - 100) < 0.5
 
-  function updateMember(i: number, field: 'name' | 'share', value: string | number) {
-    setMembers(prev => prev.map((m, idx) => idx === i ? { ...m, [field]: value } : m))
+  function updateOther(i: number, field: 'name' | 'share', value: string | number) {
+    setOtherMembers(prev => prev.map((m, idx) => idx === i ? { ...m, [field]: value } : m))
   }
 
   function addMember() {
-    setMembers(prev => [...prev, { name: '', share: 0 }])
+    setOtherMembers(prev => [...prev, { name: '', share: 0 }])
   }
 
   function removeMember(i: number) {
-    if (members.length <= 2) return
-    setMembers(prev => prev.filter((_, idx) => idx !== i))
+    if (otherMembers.length <= 1) return
+    setOtherMembers(prev => prev.filter((_, idx) => idx !== i))
   }
 
   async function createHousehold() {
@@ -35,7 +50,10 @@ export default function OnboardingPage() {
     const res = await fetch('/api/household/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: householdName, members }),
+      body: JSON.stringify({
+        name: householdName,
+        members: allMembers,
+      }),
     })
 
     if (res.ok) {
@@ -49,7 +67,6 @@ export default function OnboardingPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', maxWidth: 430, margin: '0 auto', padding: '40px 20px' }}>
 
-      {/* Logo */}
       <div style={{ fontFamily: 'var(--font-syne)', fontSize: 24, fontWeight: 800, marginBottom: 32 }}>
         Hogar<span style={{ color: 'var(--lime-dk)' }}>Fi</span>
       </div>
@@ -71,7 +88,7 @@ export default function OnboardingPage() {
             </label>
             <input
               type="text"
-              placeholder="ej. Hogar Martínez, Casa de la playa..."
+              placeholder="ej. Hogar Martínez, Casa familiar..."
               value={householdName}
               onChange={e => setHouseholdName(e.target.value)}
               style={{ background: 'var(--surface)', border: '1.5px solid var(--border)', borderRadius: 12, padding: '14px 16px', fontSize: 15, color: 'var(--ink)', outline: 'none', fontFamily: 'var(--font-instrument)', width: '100%' }}
@@ -94,19 +111,41 @@ export default function OnboardingPage() {
               ¿Quiénes viven aquí? 👥
             </div>
             <div style={{ fontSize: 14, color: 'var(--ink3)' }}>
-              Define los miembros y qué % del presupuesto corresponde a cada uno
+              Define qué % del presupuesto corresponde a cada miembro
             </div>
           </div>
 
-          {/* Members */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {members.map((m, i) => (
+
+            {/* TÚ — fijo */}
+            <div style={{ background: 'var(--surface)', border: '1.5px solid var(--ink)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#b8f04a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#1a1814', flexShrink: 0 }}>
+                {myName[0] ?? '?'}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{myName} <span style={{ fontSize: 11, color: 'var(--ink3)', fontWeight: 400 }}>(tú)</span></div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input
+                  type="number"
+                  value={myShare}
+                  min={0}
+                  max={100}
+                  onChange={e => setMyShare(Number(e.target.value))}
+                  style={{ width: 52, background: 'var(--surface2)', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 4px', fontSize: 16, fontWeight: 700, textAlign: 'center', fontFamily: 'var(--font-syne)', color: 'var(--ink)', outline: 'none' }}
+                />
+                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink3)' }}>%</span>
+              </div>
+            </div>
+
+            {/* OTROS MIEMBROS */}
+            {otherMembers.map((m, i) => (
               <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
                 <input
                   type="text"
-                  placeholder={`Miembro ${i + 1}`}
+                  placeholder={`Miembro ${i + 2}`}
                   value={m.name}
-                  onChange={e => updateMember(i, 'name', e.target.value)}
+                  onChange={e => updateOther(i, 'name', e.target.value)}
                   style={{ flex: 1, background: 'transparent', border: 'none', fontSize: 15, fontWeight: 500, color: 'var(--ink)', outline: 'none', fontFamily: 'var(--font-instrument)' }}
                 />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -115,21 +154,21 @@ export default function OnboardingPage() {
                     value={m.share}
                     min={0}
                     max={100}
-                    onChange={e => updateMember(i, 'share', Number(e.target.value))}
+                    onChange={e => updateOther(i, 'share', Number(e.target.value))}
                     style={{ width: 52, background: 'var(--surface2)', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 4px', fontSize: 16, fontWeight: 700, textAlign: 'center', fontFamily: 'var(--font-syne)', color: 'var(--ink)', outline: 'none' }}
                   />
                   <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink3)' }}>%</span>
                 </div>
-                {members.length > 2 && (
+                {otherMembers.length > 1 && (
                   <button onClick={() => removeMember(i)} style={{ background: 'none', border: 'none', color: 'var(--coral)', cursor: 'pointer', fontSize: 18, padding: 4 }}>×</button>
                 )}
               </div>
             ))}
           </div>
 
-          {/* Total */}
+          {/* TOTAL */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: sharesOk ? 'rgba(184,240,74,.08)' : 'rgba(255,107,74,.08)', border: `1px solid ${sharesOk ? 'rgba(184,240,74,.3)' : 'rgba(255,107,74,.3)'}`, borderRadius: 10 }}>
-            <span style={{ fontSize: 13, fontWeight: 600 }}>Total porcentajes</span>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>Total</span>
             <span style={{ fontFamily: 'var(--font-syne)', fontSize: 16, fontWeight: 800, color: sharesOk ? 'var(--lime-dk)' : 'var(--coral)' }}>
               {totalShare}% {sharesOk ? '✓' : `— faltan ${100 - totalShare}%`}
             </span>
