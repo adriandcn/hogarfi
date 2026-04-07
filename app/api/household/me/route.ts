@@ -25,8 +25,8 @@ export async function GET() {
     myMemberId: member.id,
     members: member.household.members.map(m => ({
       id: m.id,
-      name: m.user.name ?? 'Sin nombre',
+      name: m.name ?? m.user?.name ?? 'Sin nombre',
       defaultShare: m.defaultShare,
     })),
   })
-} 
+}

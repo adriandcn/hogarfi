@@ -1,4 +1,3 @@
- 
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { headers } from 'next/headers'
@@ -10,7 +9,7 @@ export async function POST(req: Request) {
 
   const { name, members } = await req.json()
 
-  if (!name || !members || members.length < 2) {
+  if (!name || !members || members.length < 1) {
     return NextResponse.json({ error: 'Invalid data' }, { status: 400 })
   }
 
@@ -19,17 +18,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Shares must sum 100' }, { status: 400 })
   }
 
-  // Crear hogar con el usuario actual como admin
   const household = await prisma.household.create({
     data: {
       name,
-      members: {
-        create: {
-          userId: session.user.id,
-          role: 'ADMIN',
-          defaultShare: members[0].share,
-        },
-      },
       subscription: {
         create: {
           plan: 'FREE',
@@ -40,19 +31,41 @@ export async function POST(req: Request) {
     },
   })
 
-  // Los otros miembros se agregan cuando acepten la invitación
-  // Por ahora guardamos sus nombres como invitaciones pendientes
-  for (const member of members.slice(1)) {
-    if (member.name) {
-      await prisma.invitation.create({
-        data: {
-          householdId: household.id,
-          invitedBy: session.user.id,
-          email: null,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        },
-      })
-    }
+  // Primer miembro = admin con cuenta
+  await prisma.householdMember.create({
+    data: {
+      householdId: household.id,
+      userId: session.user.id,
+      name: session.user.name,
+      role: 'ADMIN',
+      defaultShare: members[0].share,
+    },
+  })
+
+  // Resto de miembros sin cuenta — se unen por invitación
+  for (let i = 1; i < members.length; i++) {
+    const m = members[i]
+    if (!m.name) continue
+
+    const member = await prisma.householdMember.create({
+      data: {
+        householdId: household.id,
+        userId: null,
+        name: m.name,
+        role: 'MEMBER',
+        defaultShare: m.share,
+      },
+    })
+
+    // Crear invitación para ese miembro
+    await prisma.invitation.create({
+      data: {
+        householdId: household.id,
+        invitedBy: session.user.id,
+        memberId: member.id,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    })
   }
 
   return NextResponse.json({ householdId: household.id })
