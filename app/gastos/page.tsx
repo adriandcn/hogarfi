@@ -56,10 +56,10 @@ export default async function GastosPage() {
             return (
               <div key={m.id} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 99, padding: '7px 14px 7px 8px' }}>
                 <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#b8f04a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#1a1814' }}>
-                  {m.user.name?.[0] ?? '?'}
+                  {(m.name ?? m.user?.name ?? '?')[0]}
                 </div>
                 <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,.8)' }}>
-                  {m.user.name?.split(' ')[0]}
+                  {(m.name ?? m.user?.name ?? 'Sin nombre').split(' ')[0]}
                 </span>
                 <span style={{ fontSize: 12, fontWeight: 700, color: total >= 0 ? '#b8f04a' : '#ff6b4a' }}>
                   {total >= 0 ? '+' : ''}${Math.abs(total).toFixed(0)}
@@ -127,9 +127,9 @@ export default async function GastosPage() {
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--ink3)', display: 'flex', alignItems: 'center', gap: 5 }}>
                       <span style={{ width: 16, height: 16, borderRadius: '50%', background: '#b8f04a', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#1a1814' }}>
-                        {payer?.user.name?.[0] ?? '?'}
+                        {(payer?.name ?? payer?.user?.name ?? '?')[0]}
                       </span>
-                      {payer?.user.name?.split(' ')[0]} pagó · {new Date(exp.createdAt).toLocaleDateString('es', { day: 'numeric', month: 'short' })}
+                      {(payer?.name ?? payer?.user?.name ?? 'Sin nombre').split(' ')[0]} pagó · {new Date(exp.createdAt).toLocaleDateString('es', { day: 'numeric', month: 'short' })}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
