@@ -14,12 +14,14 @@ export default function OnboardingPage() {
   ])
 
   useEffect(() => {
-    // Obtener nombre del usuario logueado
     fetch('/api/auth/get-session')
       .then(r => r.json())
       .then(data => {
-        if (data?.user?.name) setMyName(data.user.name.split(' ')[0])
+        if (data?.user?.name) {
+          setMyName(data.user.name.split(' ')[0])
+        }
       })
+      .catch(() => {})
   }, [])
 
   const allMembers = [
@@ -46,31 +48,32 @@ export default function OnboardingPage() {
   async function createHousehold() {
     if (!householdName || !sharesOk) return
     setLoading(true)
-
-    const res = await fetch('/api/household/create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: householdName,
-        members: allMembers,
-      }),
-    })
-
-    if (res.ok) {
-      router.push('/dashboard')
-    } else {
-      alert('Error creando el hogar. Intenta de nuevo.')
+    try {
+      const res = await fetch('/api/household/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: householdName, members: allMembers }),
+      })
+      if (res.ok) {
+        router.push('/dashboard')
+      } else {
+        alert('Error creando el hogar. Intenta de nuevo.')
+        setLoading(false)
+      }
+    } catch {
+      alert('Error de conexión')
       setLoading(false)
     }
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', maxWidth: 430, margin: '0 auto', padding: '40px 20px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', maxWidth: 430, margin: '0 auto', padding: '40px 20px 100px' }}>
 
       <div style={{ fontFamily: 'var(--font-syne)', fontSize: 24, fontWeight: 800, marginBottom: 32 }}>
         Hogar<span style={{ color: 'var(--lime-dk)' }}>Fi</span>
       </div>
 
+      {/* STEP 1 */}
       {step === 1 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           <div>
@@ -104,6 +107,7 @@ export default function OnboardingPage() {
         </div>
       )}
 
+      {/* STEP 2 */}
       {step === 2 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div>
@@ -117,13 +121,16 @@ export default function OnboardingPage() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
 
-            {/* TÚ — fijo */}
+            {/* TÚ — solo lectura */}
             <div style={{ background: 'var(--surface)', border: '1.5px solid var(--ink)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#b8f04a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#1a1814', flexShrink: 0 }}>
+              <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#b8f04a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#1a1814', flexShrink: 0 }}>
                 {myName[0] ?? '?'}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>{myName} <span style={{ fontSize: 11, color: 'var(--ink3)', fontWeight: 400 }}>(tú)</span></div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>
+                  {myName || 'Cargando...'}{' '}
+                  <span style={{ fontSize: 11, color: 'var(--ink3)', fontWeight: 400 }}>(tú · admin)</span>
+                </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <input
@@ -141,6 +148,9 @@ export default function OnboardingPage() {
             {/* OTROS MIEMBROS */}
             {otherMembers.map((m, i) => (
               <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: 'var(--ink3)', flexShrink: 0 }}>
+                  {m.name[0] ?? '?'}
+                </div>
                 <input
                   type="text"
                   placeholder={`Miembro ${i + 2}`}
@@ -160,7 +170,7 @@ export default function OnboardingPage() {
                   <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink3)' }}>%</span>
                 </div>
                 {otherMembers.length > 1 && (
-                  <button onClick={() => removeMember(i)} style={{ background: 'none', border: 'none', color: 'var(--coral)', cursor: 'pointer', fontSize: 18, padding: 4 }}>×</button>
+                  <button onClick={() => removeMember(i)} style={{ background: 'none', border: 'none', color: 'var(--coral)', cursor: 'pointer', fontSize: 20, padding: 4, lineHeight: 1 }}>×</button>
                 )}
               </div>
             ))}
