@@ -9,6 +9,15 @@ export const auth = betterAuth({
     provider: 'postgresql',
     usePlural: false,
   }),
+  advanced: {
+    crossSubDomainCookies: {
+      enabled: false,
+    },
+    defaultCookieAttributes: {
+      sameSite: 'none',
+      secure: true,
+    },
+  },
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -18,23 +27,15 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  user: {
-    modelName: 'betterAuthUser',
-  },
-  session: {
-    modelName: 'betterAuthSession',
-  },
-  account: {
-    modelName: 'betterAuthAccount',
-  },
-  verification: {
-    modelName: 'betterAuthVerification',
-  },
-trustedOrigins: [
-  'http://localhost:3000',
-  process.env.BETTER_AUTH_URL ?? '',
-  process.env.NEXT_PUBLIC_APP_URL ?? '',
-].filter(Boolean),
+  user: { modelName: 'betterAuthUser' },
+  session: { modelName: 'betterAuthSession' },
+  account: { modelName: 'betterAuthAccount' },
+  verification: { modelName: 'betterAuthVerification' },
+  trustedOrigins: [
+    'http://localhost:3000',
+    process.env.BETTER_AUTH_URL ?? '',
+    process.env.NEXT_PUBLIC_APP_URL ?? '',
+  ].filter(Boolean),
 })
 
 export type Session = typeof auth.$Infer.Session
