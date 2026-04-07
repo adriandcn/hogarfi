@@ -76,10 +76,10 @@ export default async function DashboardPage() {
           {members.map(m => (
             <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 99, padding: '6px 12px 6px 6px' }}>
               <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#b8f04a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#1a1814' }}>
-                {m.user.name?.[0] ?? '?'}
+             {(m.name ?? m.user?.name ?? '?')[0]}
               </div>
-              <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,.8)' }}>{m.user.name}</span>
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,.4)' }}>{m.defaultShare}%</span>
+             <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,.8)' }}>{m.name ?? m.user?.name ?? 'Sin nombre'}</span>
+<span style={{ fontSize: 11, color: 'rgba(255,255,255,.4)' }}>{m.defaultShare}%</span>
             </div>
           ))}
         </div>
