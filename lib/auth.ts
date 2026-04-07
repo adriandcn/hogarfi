@@ -3,6 +3,8 @@ import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { prisma } from '@/lib/prisma'
 
 export const auth = betterAuth({
+  baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:3000',
+  secret: process.env.BETTER_AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   database: prismaAdapter(prisma, {
     provider: 'postgresql',
     usePlural: false,
@@ -28,7 +30,10 @@ export const auth = betterAuth({
   verification: {
     modelName: 'betterAuthVerification',
   },
-  trustedOrigins: ['http://localhost:3000'],
+  trustedOrigins: [
+    'http://localhost:3000',
+    'https://hogarfibeta1.vercel.app',
+  ],
 })
 
 export type Session = typeof auth.$Infer.Session
