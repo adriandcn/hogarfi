@@ -30,10 +30,11 @@ export const auth = betterAuth({
   verification: {
     modelName: 'betterAuthVerification',
   },
-  trustedOrigins: [
-    'http://localhost:3000',
-    'https://hogarfi.vercel.app',
-  ],
+trustedOrigins: [
+  'http://localhost:3000',
+  process.env.BETTER_AUTH_URL ?? '',
+  process.env.NEXT_PUBLIC_APP_URL ?? '',
+].filter(Boolean),
 })
 
 export type Session = typeof auth.$Infer.Session
