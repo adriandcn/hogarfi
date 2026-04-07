@@ -6,8 +6,8 @@ const tabs = [
   { href: '/dashboard', icon: '🏠', label: 'Inicio' },
   { href: '/gastos', icon: '💳', label: 'Gastos' },
   { href: '/gastos/nuevo', icon: '➕', label: 'Agregar' },
-  { href: '/presupuesto', icon: '📊', label: 'Presupuesto' },
   { href: '/liquidar', icon: '⚖️', label: 'Liquidar' },
+  { href: '/invitar', icon: '👥', label: 'Invitar' },
 ]
 
 export default function BottomNav() {
