@@ -81,7 +81,7 @@ export default async function GastosPage() {
               {reimbursements.map(r => {
                 const from = members.find(m => m.id === r.from)
                 const to = members.find(m => m.id === r.to)
-                return `${from?.user.name?.split(' ')[0]} → ${to?.user.name?.split(' ')[0]} $${r.amount.toFixed(0)}`
+               return `${(from?.name ?? from?.user?.name ?? '?').split(' ')[0]} → ${(to?.name ?? to?.user?.name ?? '?').split(' ')[0]} $${r.amount.toFixed(0)}`
               }).join(' · ')}
             </div>
           </div>
