@@ -16,15 +16,16 @@ type Budget = {
 }
 
 const DEFAULT_CATEGORIES = [
-  { name: 'Comida', icon: '🛒', color: '#b8f04a' },
-  { name: 'Servicios', icon: '⚡', color: '#4a9eff' },
-  { name: 'Entretenimiento', icon: '🎬', color: '#ff6b4a' },
-  { name: 'Transporte', icon: '🚗', color: '#9b7fe8' },
-  { name: 'Salud', icon: '💊', color: '#f5a623' },
-  { name: 'Hogar', icon: '🏠', color: '#4ade80' },
+  { name: 'Comida', icon: '🛒', color: '#5a8a00' },
+  { name: 'Servicios', icon: '⚡', color: '#3b82f6' },
+  { name: 'Entretenimiento', icon: '🎬', color: '#ef4444' },
+  { name: 'Transporte', icon: '🚗', color: '#8b5cf6' },
+  { name: 'Salud', icon: '💊', color: '#f59e0b' },
+  { name: 'Hogar', icon: '🏠', color: '#10b981' },
+  { name: 'Otro', icon: '📦', color: '#9b9690' },
 ]
 
-export default function BudgetClient() {
+export default function BudgetClient({ isSetup = false }: { isSetup?: boolean }) {
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [loading, setLoading] = useState(true)
   const [month, setMonth] = useState(new Date().getMonth() + 1)
@@ -42,34 +43,40 @@ export default function BudgetClient() {
 
   async function loadBudgets() {
     setLoading(true)
-    const res = await fetch('/api/budget')
-    const data = await res.json()
-    setBudgets(data.budgets ?? [])
-    setLoading(false)
+    try {
+      const res = await fetch('/api/budget')
+      const data = await res.json()
+      setBudgets(data.budgets ?? [])
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function addBudget() {
     if (!newAmount) return
     setSaving(true)
     const cat = DEFAULT_CATEGORIES.find(c => c.name === newCat) ?? DEFAULT_CATEGORIES[0]
-    const res = await fetch('/api/budget', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        categoryName: cat.name,
-        icon: cat.icon,
-        color: cat.color,
-        amount: parseFloat(newAmount),
-        month,
-        year,
-      }),
-    })
-    if (res.ok) {
-      await loadBudgets()
-      setNewAmount('')
-      setShowAdd(false)
+    try {
+      const res = await fetch('/api/budget', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          categoryName: cat.name,
+          icon: cat.icon,
+          color: cat.color,
+          amount: parseFloat(newAmount),
+          month,
+          year,
+        }),
+      })
+      if (res.ok) {
+        await loadBudgets()
+        setNewAmount('')
+        setShowAdd(false)
+      }
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
   }
 
   const totalBudget = budgets.reduce((s, b) => s + b.amount, 0)
@@ -77,98 +84,118 @@ export default function BudgetClient() {
   const pct = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', maxWidth: 430, margin: '0 auto' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--off)', paddingBottom: 100 }}>
 
       {/* HEADER */}
-      <div style={{ background: 'var(--ink)', padding: '24px 20px 20px' }}>
-        <div style={{ fontFamily: 'var(--font-syne)', fontSize: 24, fontWeight: 800, color: '#fff', marginBottom: 16 }}>
+      <div style={{ background: 'var(--title)', padding: '52px 20px 20px' }}>
+        <div style={{ fontSize: 24, fontWeight: 800, color: '#fff', letterSpacing: '-.02em', marginBottom: 16 }}>
           Presupuesto
         </div>
 
         {/* Month nav */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <button
-            onClick={() => {
-              if (month === 1) { setMonth(12); setYear(y => y - 1) }
-              else setMonth(m => m - 1)
-            }}
-            style={{ background: 'rgba(255,255,255,.1)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', fontSize: 16 }}>
+            onClick={() => { if (month === 1) { setMonth(12); setYear(y => y - 1) } else setMonth(m => m - 1) }}
+            style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,.1)', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             ‹
           </button>
-          <div style={{ fontFamily: 'var(--font-syne)', fontSize: 16, fontWeight: 600, color: '#fff' }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>
             {monthNames[month - 1]} {year}
           </div>
           <button
-            onClick={() => {
-              if (month === 12) { setMonth(1); setYear(y => y + 1) }
-              else setMonth(m => m + 1)
-            }}
-            style={{ background: 'rgba(255,255,255,.1)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', fontSize: 16 }}>
+            onClick={() => { if (month === 12) { setMonth(1); setYear(y => y + 1) } else setMonth(m => m + 1) }}
+            style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,.1)', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             ›
           </button>
         </div>
 
-        {/* Totales */}
+        {/* Total progress */}
         {totalBudget > 0 && (
-          <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '14px 16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ fontSize: 12, color: 'rgba(255,255,255,.5)' }}>Gastado</span>
-              <span style={{ fontSize: 12, color: 'rgba(255,255,255,.5)' }}>Presupuesto</span>
-            </div>
+          <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 14, padding: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-              <span style={{ fontFamily: 'var(--font-syne)', fontSize: 22, fontWeight: 800, color: pct > 100 ? '#ff6b4a' : '#fff' }}>
-                ${totalSpent.toFixed(0)}
-              </span>
-              <span style={{ fontFamily: 'var(--font-syne)', fontSize: 22, fontWeight: 800, color: 'rgba(255,255,255,.5)' }}>
-                ${totalBudget.toFixed(0)}
-              </span>
+              <div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 4 }}>Gastado</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 26, fontWeight: 500, color: pct > 100 ? '#ff8a70' : '#fff' }}>
+                  ${totalSpent.toFixed(0)}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 4 }}>Limite</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 26, fontWeight: 500, color: 'rgba(255,255,255,.4)' }}>
+                  ${totalBudget.toFixed(0)}
+                </div>
+              </div>
             </div>
-            <div style={{ height: 6, background: 'rgba(255,255,255,.1)', borderRadius: 99, overflow: 'hidden' }}>
-              <div style={{ height: '100%', borderRadius: 99, background: pct > 100 ? '#ff6b4a' : '#b8f04a', width: `${Math.min(pct, 100)}%`, transition: 'width .6s' }}/>
+            <div style={{ height: 5, background: 'rgba(255,255,255,.08)', borderRadius: 999, overflow: 'hidden', marginBottom: 6 }}>
+              <div style={{ height: '100%', borderRadius: 999, background: pct > 100 ? 'var(--red)' : 'var(--green)', width: Math.min(pct, 100) + '%', transition: 'width .6s' }} />
             </div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', marginTop: 6, textAlign: 'right' }}>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.35)', textAlign: 'right' }}>
               {pct}% usado · ${(totalBudget - totalSpent).toFixed(0)} restantes
             </div>
           </div>
         )}
       </div>
 
-      <div style={{ padding: '16px 20px', paddingBottom: 120 }}>
+      {/* SETUP BANNER */}
+      {isSetup && (
+        <div style={{ padding: '16px 20px 0' }}>
+          <div style={{ background: 'rgba(201,242,106,.1)', border: '1px solid rgba(201,242,106,.3)', borderRadius: 14, padding: '14px 16px', marginBottom: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--green-dk)', marginBottom: 4 }}>
+              Configura tu presupuesto mensual
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.5 }}>
+              Define cuanto quieren gastar en cada categoria. Puedes configurarlo ahora o hacerlo despues desde la app.
+            </div>
+          </div>
+          
+            href="/dashboard"
+            style={{ display: 'block', textAlign: 'center', padding: '13px', fontSize: 14, fontWeight: 600, color: 'var(--muted)', border: '1.5px solid var(--border)', borderRadius: 'var(--r-sm)', textDecoration: 'none', marginBottom: 4 }}>
+            Saltar por ahora — ir al dashboard →
+          </a>
+        </div>
+      )}
 
-        {/* LISTA DE CATEGORIAS */}
+      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+        {/* LISTA */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--ink3)' }}>Cargando...</div>
-        ) : budgets.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--muted)', fontSize: 14 }}>Cargando...</div>
+        ) : budgets.length === 0 && !showAdd ? (
           <div style={{ textAlign: 'center', padding: '40px 20px' }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>📊</div>
-            <div style={{ fontFamily: 'var(--font-syne)', fontSize: 16, fontWeight: 700, marginBottom: 8 }}>
-              Sin presupuesto aún
-            </div>
-            <div style={{ fontSize: 13, color: 'var(--ink3)', marginBottom: 20 }}>
-              Define cuánto quieres gastar en cada categoría
+            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 8, letterSpacing: '-.01em' }}>Sin presupuesto aun</div>
+            <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.5 }}>
+              Define cuanto quieres gastar en cada categoria del hogar
             </div>
           </div>
         ) : (
-          <div style={{ borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column', marginBottom: 12 }}>
+          <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
             {budgets.map((b, i) => {
               const pctB = b.amount > 0 ? Math.min(Math.round((b.spent / b.amount) * 100), 100) : 0
               const over = b.spent > b.amount
               return (
-                <div key={b.id} style={{ background: 'var(--surface)', padding: '14px 16px', display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 10, alignItems: 'center', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
-                  <div style={{ fontSize: 22 }}>{b.category.icon}</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>{b.category.name}</div>
-                    <div style={{ height: 5, background: 'var(--surface2)', borderRadius: 99, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', borderRadius: 99, background: over ? 'var(--coral)' : b.category.color, width: `${pctB}%`, transition: 'width .6s' }}/>
+                <div key={b.id} style={{ padding: '14px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+                      {b.category.icon}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 1 }}>{b.category.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                        ${b.spent.toFixed(0)} de ${b.amount.toFixed(0)}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 15, fontWeight: 500, color: over ? 'var(--red)' : 'var(--title)' }}>
+                        {over ? '+$' + (b.spent - b.amount).toFixed(0) : '$' + (b.amount - b.spent).toFixed(0)}
+                      </div>
+                      <div style={{ fontSize: 11, color: over ? 'var(--red)' : 'var(--muted)' }}>
+                        {over ? 'excedido' : 'restante'}
+                      </div>
                     </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontFamily: 'var(--font-syne)', fontSize: 14, fontWeight: 700, color: over ? 'var(--coral)' : 'var(--ink)' }}>
-                      ${b.spent.toFixed(0)}
-                    </div>
-                    <div style={{ fontSize: 10, color: over ? 'var(--coral)' : 'var(--ink3)' }}>
-                      {over ? `⚠ +$${(b.spent - b.amount).toFixed(0)}` : `/ $${b.amount.toFixed(0)}`}
-                    </div>
+                  <div style={{ height: 5, background: 'var(--soft)', borderRadius: 999, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: 999, background: over ? 'var(--red)' : b.category.color, width: pctB + '%', transition: 'width .6s' }} />
                   </div>
                 </div>
               )
@@ -176,61 +203,55 @@ export default function BudgetClient() {
           </div>
         )}
 
-        {/* ADD BUDGET */}
-        {!showAdd ? (
-          <button
-            onClick={() => setShowAdd(true)}
-            style={{ width: '100%', background: 'transparent', border: '1.5px dashed var(--border)', borderRadius: 14, padding: '14px', fontSize: 14, fontWeight: 600, cursor: 'pointer', color: 'var(--ink3)', fontFamily: 'var(--font-syne)' }}>
-            + Agregar categoría
-          </button>
-        ) : (
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ fontFamily: 'var(--font-syne)', fontSize: 15, fontWeight: 700 }}>Nueva categoría</div>
+        {/* ADD FORM */}
+        {showAdd ? (
+          <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, padding: '18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>Nueva categoria</div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink3)', letterSpacing: '.08em', textTransform: 'uppercase' }}>Categoría</label>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>Categoria</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {DEFAULT_CATEGORIES.map(c => (
-                  <button
-                    key={c.name}
-                    onClick={() => setNewCat(c.name)}
-                    style={{ padding: '7px 12px', background: newCat === c.name ? 'var(--ink)' : 'var(--surface2)', border: 'none', borderRadius: 99, fontSize: 12, fontWeight: 500, cursor: 'pointer', color: newCat === c.name ? '#fff' : 'var(--ink)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <button key={c.name} onClick={() => setNewCat(c.name)}
+                    style={{ padding: '7px 12px', background: newCat === c.name ? 'var(--title)' : 'var(--soft)', border: 'none', borderRadius: 999, fontSize: 12, fontWeight: 500, cursor: 'pointer', color: newCat === c.name ? '#fff' : 'var(--body)', display: 'flex', alignItems: 'center', gap: 4 }}>
                     {c.icon} {c.name}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink3)', letterSpacing: '.08em', textTransform: 'uppercase' }}>Límite mensual</label>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>Limite mensual</div>
               <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--font-syne)', fontSize: 18, fontWeight: 700, color: 'var(--ink3)' }}>$</span>
+                <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--mono)', fontSize: 20, color: 'var(--muted)' }}>$</span>
                 <input
                   type="number"
                   placeholder="0"
                   value={newAmount}
                   onChange={e => setNewAmount(e.target.value)}
-                  style={{ width: '100%', background: 'var(--surface2)', border: '1.5px solid var(--border)', borderRadius: 12, padding: '12px 12px 12px 32px', fontFamily: 'var(--font-syne)', fontSize: 22, fontWeight: 700, color: 'var(--ink)', outline: 'none' }}
+                  style={{ width: '100%', height: 56, background: 'var(--soft)', border: '1.5px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '0 16px 0 36px', fontFamily: 'var(--mono)', fontSize: 24, fontWeight: 500, color: 'var(--title)', outline: 'none' }}
                 />
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => setShowAdd(false)}
-                style={{ flex: 1, background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 12, padding: '12px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-syne)' }}>
+              <button onClick={() => { setShowAdd(false); setNewAmount('') }}
+                style={{ flex: 1, height: 48, background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 'var(--r-sm)', fontSize: 14, fontWeight: 600, cursor: 'pointer', color: 'var(--body)' }}>
                 Cancelar
               </button>
-              <button
-                onClick={addBudget}
-                disabled={!newAmount || saving}
-                style={{ flex: 2, background: 'var(--ink)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-syne)', opacity: !newAmount || saving ? .5 : 1 }}>
+              <button onClick={addBudget} disabled={!newAmount || saving}
+                style={{ flex: 2, height: 48, background: 'var(--title)', color: '#fff', border: 'none', borderRadius: 'var(--r-sm)', fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: !newAmount || saving ? .4 : 1 }}>
                 {saving ? 'Guardando...' : 'Guardar'}
               </button>
             </div>
           </div>
+        ) : (
+          <button onClick={() => setShowAdd(true)}
+            style={{ width: '100%', padding: '14px', border: '1.5px dashed var(--border)', borderRadius: 14, background: 'transparent', fontSize: 14, fontWeight: 600, cursor: 'pointer', color: 'var(--muted)' }}>
+            + Agregar categoria
+          </button>
         )}
       </div>
     </div>
   )
-} 
+}
