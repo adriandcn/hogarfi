@@ -4,9 +4,8 @@ import { usePathname } from 'next/navigation'
 export default function BottomNav() {
   const pathname = usePathname()
 
-  const hideOn = ['/login', '/onboarding', '/welcome', '/invite']
-  if (hideOn.some(p => pathname.startsWith(p))) return null
-
+const hideOn = ['/login', '/onboarding', '/welcome', '/invite']
+if (pathname === '/' || hideOn.some(p => pathname.startsWith(p))) return null
   const tabs = [
     { href: '/dashboard', label: 'Inicio', icon: '🏠' },
     { href: '/gastos', label: 'Gastos', icon: '💳' },
