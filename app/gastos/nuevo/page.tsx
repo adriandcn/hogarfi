@@ -146,7 +146,7 @@ export default function NuevoGastoPage() {
         </div>
       </div>
 
-      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 120 }}>
+      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 29, paddingBottom: 160 }}>
 
         {/* DESCRIPCION */}
         <div>
@@ -338,7 +338,7 @@ export default function NuevoGastoPage() {
       </div>
 
       {/* SUBMIT */}
-      <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 430, padding: '16px 20px 36px', background: 'linear-gradient(to top, var(--off) 70%, transparent)' }}>
+      <div style={{ position: 'fixed', bottom: 72, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 430, padding: '16px 20px 36px', background: 'linear-gradient(to top, var(--off) 70%, transparent)' }}>
         <button onClick={handleSave}
           disabled={!amount || !description || saving || (tab === 'custom' && !customOk)}
           style={{ width: '100%', height: 52, background: 'var(--title)', color: '#fff', border: 'none', borderRadius: 'var(--r-sm)', fontSize: 15, fontWeight: 700, cursor: 'pointer', opacity: (!amount || !description || saving || (tab === 'custom' && !customOk)) ? .4 : 1 }}>
