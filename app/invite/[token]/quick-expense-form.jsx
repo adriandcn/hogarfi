@@ -80,7 +80,7 @@ export default function QuickExpenseForm({ token, householdId, householdName, me
         </div>
       </div>
 
-      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 120 }}>
+      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 160 }}>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink3)', letterSpacing: '.08em', textTransform: 'uppercase' }}>Monto</label>
@@ -129,7 +129,7 @@ export default function QuickExpenseForm({ token, householdId, householdName, me
         </div>
       </div>
 
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '16px 20px 30px', background: 'linear-gradient(to top, var(--bg) 70%, transparent)', maxWidth: 430, margin: '0 auto' }}>
+      <div style={{ position: 'fixed', bottom: 70, left: 0, right: 0, padding: '16px 20px 30px', background: 'linear-gradient(to top, var(--bg) 70%, transparent)', maxWidth: 430, margin: '0 auto' }}>
         <button
           onClick={handleSubmit}
           disabled={!amount || !description || saving}
