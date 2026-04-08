@@ -88,7 +88,7 @@ export default function NuevoGastoPage() {
     if (!amount || !description || !payerId) return
     setSaving(true)
 
-    let splits = members.map(m => ({
+    const splits = members.map(m => ({
       memberId: m.id,
       percentage: tab === 'custom' ? (customShares[m.id] ?? 0) : m.defaultShare,
       amount: amountNum * (tab === 'custom' ? (customShares[m.id] ?? 0) : m.defaultShare) / 100,
@@ -99,15 +99,7 @@ export default function NuevoGastoPage() {
     const res = await fetch('/api/expense', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        householdId,
-        paidById: payerId,
-        description,
-        amount: amountNum,
-        categoryName: category,
-        icon: catIcon,
-        splits,
-      }),
+      body: JSON.stringify({ householdId, paidById: payerId, description, amount: amountNum, categoryName: category, icon: catIcon, splits }),
     })
 
     setSaving(false)
@@ -146,7 +138,24 @@ export default function NuevoGastoPage() {
         </div>
       </div>
 
-      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 29, paddingBottom: 160 }}>
+      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 160 }}>
+
+        {/* AI SCANNER — primero */}
+        <div onClick={() => document.getElementById('receipt-input')?.click()}
+          style={{ border: '1.5px dashed var(--border)', borderRadius: 'var(--r-md)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: scanning ? 'default' : 'pointer', background: scanning ? 'rgba(201,242,106,.04)' : receipt ? 'rgba(201,242,106,.06)' : 'transparent' }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
+            {scanning ? '⏳' : receipt ? '✅' : '📸'}
+          </div>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>
+              {scanning ? 'Analizando con AI...' : receipt ? 'Recibo analizado' : 'Escanear recibo con AI'}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+              {scanning ? 'Extrayendo monto y descripcion...' : receipt ? 'Toca para cambiar' : 'Extrae monto y descripcion automaticamente'}
+            </div>
+          </div>
+        </div>
+        <input id="receipt-input" type="file" accept="image/*" capture="environment" onChange={handleReceipt} style={{ display: 'none' }} />
 
         {/* DESCRIPCION */}
         <div>
@@ -156,7 +165,7 @@ export default function NuevoGastoPage() {
             placeholder="ej. Supermercado, gasolina..."
             value={description}
             onChange={e => setDescription(e.target.value)}
-            style={{ width: '100%', height: 50, background: 'var(--white)', border: '1.5px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '0 16px', fontSize: 15, color: 'var(--title)', outline: 'none' }}
+            style={{ width: '100%', height: 50, background: 'var(--white)', border: '1.5px solid ' + (description ? 'var(--title)' : 'var(--border)'), borderRadius: 'var(--r-sm)', padding: '0 16px', fontSize: 15, color: 'var(--title)', outline: 'none' }}
           />
         </div>
 
@@ -208,7 +217,7 @@ export default function NuevoGastoPage() {
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 14, fontWeight: 600 }}>{m.name}</div>
                       <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                        {amountNum > 0 ? 'Recupera $' + recover.toFixed(2) : 'Pago el 100%'}
+                        {amountNum > 0 ? 'Recupera $' + recover.toFixed(2) + ' del hogar' : 'Pago el 100%'}
                       </div>
                     </div>
                   </div>
@@ -318,27 +327,10 @@ export default function NuevoGastoPage() {
           )}
         </div>
 
-        {/* AI SCANNER */}
-        <div onClick={() => document.getElementById('receipt-input')?.click()}
-          style={{ border: '1.5px dashed var(--border)', borderRadius: 'var(--r-md)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: scanning ? 'default' : 'pointer' }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
-            {scanning ? '⏳' : receipt ? '✅' : '📸'}
-          </div>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>
-              {scanning ? 'Analizando con AI...' : receipt ? 'Recibo analizado' : 'Escanear recibo con AI'}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-              {scanning ? 'Extrayendo datos...' : 'Opcional — extrae datos automaticamente'}
-            </div>
-          </div>
-        </div>
-        <input id="receipt-input" type="file" accept="image/*" capture="environment" onChange={handleReceipt} style={{ display: 'none' }} />
-
       </div>
 
       {/* SUBMIT */}
-      <div style={{ position: 'fixed', bottom: 72, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 430, padding: '16px 20px 36px', background: 'linear-gradient(to top, var(--off) 70%, transparent)' }}>
+      <div style={{ position: 'fixed', bottom: 72, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 430, padding: '16px 20px', background: 'linear-gradient(to top, var(--off) 70%, transparent)' }}>
         <button onClick={handleSave}
           disabled={!amount || !description || saving || (tab === 'custom' && !customOk)}
           style={{ width: '100%', height: 52, background: 'var(--title)', color: '#fff', border: 'none', borderRadius: 'var(--r-sm)', fontSize: 15, fontWeight: 700, cursor: 'pointer', opacity: (!amount || !description || saving || (tab === 'custom' && !customOk)) ? .4 : 1 }}>
