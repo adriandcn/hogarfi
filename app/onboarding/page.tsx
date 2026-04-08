@@ -9,40 +9,23 @@ export default function OnboardingPage() {
   const [householdName, setHouseholdName] = useState('')
   const [myName, setMyName] = useState('')
   const [myShare, setMyShare] = useState(60)
-  const [otherMembers, setOtherMembers] = useState([
-    { name: '', share: 40 },
-  ])
+  const [otherMembers, setOtherMembers] = useState([{ name: '', share: 40 }])
 
   useEffect(() => {
     fetch('/api/auth/get-session')
       .then(r => r.json())
       .then(data => {
-        if (data?.user?.name) {
-          setMyName(data.user.name.split(' ')[0])
-        }
+        if (data?.user?.name) setMyName(data.user.name.split(' ')[0])
       })
       .catch(() => {})
   }, [])
 
-  const allMembers = [
-    { name: myName, share: myShare },
-    ...otherMembers,
-  ]
-
+  const allMembers = [{ name: myName, share: myShare }, ...otherMembers]
   const totalShare = allMembers.reduce((s, m) => s + m.share, 0)
   const sharesOk = Math.abs(totalShare - 100) < 0.5
 
   function updateOther(i: number, field: 'name' | 'share', value: string | number) {
     setOtherMembers(prev => prev.map((m, idx) => idx === i ? { ...m, [field]: value } : m))
-  }
-
-  function addMember() {
-    setOtherMembers(prev => [...prev, { name: '', share: 0 }])
-  }
-
-  function removeMember(i: number) {
-    if (otherMembers.length <= 1) return
-    setOtherMembers(prev => prev.filter((_, idx) => idx !== i))
   }
 
   async function createHousehold() {
@@ -54,157 +37,186 @@ export default function OnboardingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: householdName, members: allMembers }),
       })
-      if (res.ok) {
-        router.push('/dashboard')
-      } else {
-        alert('Error creando el hogar. Intenta de nuevo.')
-        setLoading(false)
-      }
+      if (res.ok) router.push('/dashboard')
+      else { alert('Error creando el hogar'); setLoading(false) }
     } catch {
-      alert('Error de conexión')
+      alert('Error de conexion')
       setLoading(false)
     }
   }
 
+  const suggestions = ['Casa familiar', 'Hogar 2026', 'Apartamento', 'Familia']
+
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', maxWidth: 430, margin: '0 auto', padding: '40px 20px 100px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--off)', display: 'flex', flexDirection: 'column' }}>
 
-      <div style={{ fontFamily: 'var(--font-syne)', fontSize: 24, fontWeight: 800, marginBottom: 32 }}>
-        Hogar<span style={{ color: 'var(--lime-dk)' }}>Fi</span>
-      </div>
-
-      {/* STEP 1 */}
-      {step === 1 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-          <div>
-            <div style={{ fontFamily: 'var(--font-syne)', fontSize: 26, fontWeight: 800, marginBottom: 8 }}>
-              Crea tu hogar 🏠
-            </div>
-            <div style={{ fontSize: 14, color: 'var(--ink3)' }}>
-              Ponle un nombre a tu hogar familiar
-            </div>
+      {/* PROGRESS */}
+      <div style={{ padding: '56px 24px 0' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {[1, 2].map(s => (
+              <div key={s} style={{ height: 6, borderRadius: 999, background: s <= step ? 'var(--title)' : 'var(--border)', width: s === step ? 24 : 6, transition: 'all .3s' }} />
+            ))}
           </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink3)', letterSpacing: '.08em', textTransform: 'uppercase' }}>
-              Nombre del hogar
-            </label>
-            <input
-              type="text"
-              placeholder="ej. Hogar Martínez, Casa familiar..."
-              value={householdName}
-              onChange={e => setHouseholdName(e.target.value)}
-              style={{ background: 'var(--surface)', border: '1.5px solid var(--border)', borderRadius: 12, padding: '14px 16px', fontSize: 15, color: 'var(--ink)', outline: 'none', fontFamily: 'var(--font-instrument)', width: '100%' }}
-            />
-          </div>
-
-          <button
-            onClick={() => setStep(2)}
-            disabled={!householdName}
-            style={{ background: 'var(--ink)', color: '#fff', border: 'none', borderRadius: 12, padding: '16px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-syne)', opacity: !householdName ? .5 : 1 }}>
-            Continuar →
-          </button>
+          <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)' }}>Paso {step} de 2</span>
         </div>
-      )}
 
-      {/* STEP 2 */}
-      {step === 2 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <div>
-            <div style={{ fontFamily: 'var(--font-syne)', fontSize: 26, fontWeight: 800, marginBottom: 8 }}>
-              ¿Quiénes viven aquí? 👥
+        {/* STEP 1 */}
+        {step === 1 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--green-dk)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+                Tu hogar
+              </div>
+              <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-.02em', lineHeight: 1.15, marginBottom: 12 }}>
+                Dale un nombre a tu hogar
+              </div>
+              <div style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.6 }}>
+                Puede ser el apellido de la familia o el nombre del lugar. Esto es lo que verán todos los miembros.
+              </div>
             </div>
-            <div style={{ fontSize: 14, color: 'var(--ink3)' }}>
-              Define qué % del presupuesto corresponde a cada miembro
+
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+                Nombre del hogar
+              </div>
+              <input
+                type="text"
+                placeholder="ej. Hogar Martínez"
+                value={householdName}
+                onChange={e => setHouseholdName(e.target.value)}
+                style={{ width: '100%', height: 52, background: 'var(--white)', border: '1.5px solid ' + (householdName ? 'var(--title)' : 'var(--border)'), borderRadius: 'var(--r-sm)', padding: '0 16px', fontSize: 16, fontWeight: 500, color: 'var(--title)', outline: 'none' }}
+              />
+            </div>
+
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)', marginBottom: 10 }}>Sugerencias</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {suggestions.map(s => (
+                  <button key={s} onClick={() => setHouseholdName(s)} style={{ padding: '7px 14px', background: householdName === s ? 'var(--title)' : 'var(--white)', color: householdName === s ? '#fff' : 'var(--body)', border: '1.5px solid ' + (householdName === s ? 'var(--title)' : 'var(--border)'), borderRadius: 'var(--r-full)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                    {s}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
+        )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-
-            {/* TÚ — solo lectura */}
-            <div style={{ background: 'var(--surface)', border: '1.5px solid var(--ink)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#b8f04a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#1a1814', flexShrink: 0 }}>
-                {myName[0] ?? '?'}
+        {/* STEP 2 */}
+        {step === 2 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--green-dk)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+                Miembros
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>
-                  {myName || 'Cargando...'}{' '}
-                  <span style={{ fontSize: 11, color: 'var(--ink3)', fontWeight: 400 }}>(tú · admin)</span>
-                </div>
+              <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-.02em', lineHeight: 1.15, marginBottom: 12 }}>
+                Quienes viven aqui
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input
-                  type="number"
-                  value={myShare}
-                  min={0}
-                  max={100}
-                  onChange={e => setMyShare(Number(e.target.value))}
-                  style={{ width: 52, background: 'var(--surface2)', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 4px', fontSize: 16, fontWeight: 700, textAlign: 'center', fontFamily: 'var(--font-syne)', color: 'var(--ink)', outline: 'none' }}
-                />
-                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink3)' }}>%</span>
+              <div style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.6 }}>
+                Asigna un porcentaje a cada miembro. Estos reflejan cuanto le corresponde pagar a cada uno del total mensual — idealmente basado en sus ingresos.
               </div>
             </div>
 
-            {/* OTROS MIEMBROS */}
-            {otherMembers.map((m, i) => (
-              <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: 'var(--ink3)', flexShrink: 0 }}>
-                  {m.name[0] ?? '?'}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {/* TÚ */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 4 }}>
+                Tu cuenta (admin)
+              </div>
+              <div style={{ background: 'var(--white)', border: '1.5px solid var(--title)', borderRadius: 'var(--r-sm)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: 'var(--title)', flexShrink: 0 }}>
+                  {myName[0] ?? '?'}
                 </div>
-                <input
-                  type="text"
-                  placeholder={`Miembro ${i + 2}`}
-                  value={m.name}
-                  onChange={e => updateOther(i, 'name', e.target.value)}
-                  style={{ flex: 1, background: 'transparent', border: 'none', fontSize: 15, fontWeight: 500, color: 'var(--ink)', outline: 'none', fontFamily: 'var(--font-instrument)' }}
-                />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600 }}>{myName || 'Cargando...'}</div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>Admin del hogar</div>
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <input
                     type="number"
-                    value={m.share}
-                    min={0}
-                    max={100}
-                    onChange={e => updateOther(i, 'share', Number(e.target.value))}
-                    style={{ width: 52, background: 'var(--surface2)', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 4px', fontSize: 16, fontWeight: 700, textAlign: 'center', fontFamily: 'var(--font-syne)', color: 'var(--ink)', outline: 'none' }}
+                    value={myShare}
+                    min={0} max={100}
+                    onChange={e => setMyShare(Number(e.target.value))}
+                    style={{ width: 52, height: 40, background: 'var(--soft)', border: '1.5px solid var(--border)', borderRadius: 8, fontSize: 17, fontWeight: 600, textAlign: 'center', color: 'var(--title)', outline: 'none', fontFamily: 'var(--mono)' }}
                   />
-                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink3)' }}>%</span>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--muted)' }}>%</span>
                 </div>
-                {otherMembers.length > 1 && (
-                  <button onClick={() => removeMember(i)} style={{ background: 'none', border: 'none', color: 'var(--coral)', cursor: 'pointer', fontSize: 20, padding: 4, lineHeight: 1 }}>×</button>
-                )}
               </div>
-            ))}
-          </div>
 
-          {/* TOTAL */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: sharesOk ? 'rgba(184,240,74,.08)' : 'rgba(255,107,74,.08)', border: `1px solid ${sharesOk ? 'rgba(184,240,74,.3)' : 'rgba(255,107,74,.3)'}`, borderRadius: 10 }}>
-            <span style={{ fontSize: 13, fontWeight: 600 }}>Total</span>
-            <span style={{ fontFamily: 'var(--font-syne)', fontSize: 16, fontWeight: 800, color: sharesOk ? 'var(--lime-dk)' : 'var(--coral)' }}>
-              {totalShare}% {sharesOk ? '✓' : `— faltan ${100 - totalShare}%`}
-            </span>
-          </div>
+              {/* OTROS */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '.08em', textTransform: 'uppercase', marginTop: 8, marginBottom: 4 }}>
+                Otros miembros
+              </div>
+              {otherMembers.map((m, i) => (
+                <div key={i} style={{ background: 'var(--white)', border: '1.5px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: 'var(--muted)', flexShrink: 0 }}>
+                    {m.name[0] ?? '?'}
+                  </div>
+                  <input
+                    type="text"
+                    placeholder={'Miembro ' + (i + 2)}
+                    value={m.name}
+                    onChange={e => updateOther(i, 'name', e.target.value)}
+                    style={{ flex: 1, border: 'none', background: 'transparent', fontSize: 15, fontWeight: 500, color: 'var(--title)', outline: 'none' }}
+                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input
+                      type="number"
+                      value={m.share}
+                      min={0} max={100}
+                      onChange={e => updateOther(i, 'share', Number(e.target.value))}
+                      style={{ width: 52, height: 40, background: 'var(--soft)', border: '1.5px solid var(--border)', borderRadius: 8, fontSize: 17, fontWeight: 600, textAlign: 'center', color: 'var(--title)', outline: 'none', fontFamily: 'var(--mono)' }}
+                    />
+                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--muted)' }}>%</span>
+                  </div>
+                  {otherMembers.length > 1 && (
+                    <button onClick={() => setOtherMembers(prev => prev.filter((_, idx) => idx !== i))} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: 20, padding: 4, lineHeight: 1 }}>×</button>
+                  )}
+                </div>
+              ))}
 
+              <button
+                onClick={() => setOtherMembers(prev => [...prev, { name: '', share: 0 }])}
+                style={{ padding: '12px', border: '1.5px dashed var(--border)', borderRadius: 'var(--r-sm)', background: 'transparent', fontSize: 13, fontWeight: 600, color: 'var(--muted)', cursor: 'pointer' }}>
+                + Agregar miembro
+              </button>
+            </div>
+
+            {/* TOTAL */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: sharesOk ? 'rgba(201,242,106,.12)' : 'rgba(255,90,60,.06)', border: '1px solid ' + (sharesOk ? 'rgba(201,242,106,.4)' : 'rgba(255,90,60,.2)'), borderRadius: 'var(--r-sm)' }}>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>Total</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 500, color: sharesOk ? 'var(--green-dk)' : 'var(--red)' }}>
+                {totalShare}% {sharesOk ? '✓' : '— faltan ' + (100 - totalShare) + '%'}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* FOOTER */}
+      <div style={{ padding: '24px', marginTop: 'auto' }}>
+        {step === 1 ? (
           <button
-            onClick={addMember}
-            style={{ background: 'transparent', border: '1.5px dashed var(--border)', borderRadius: 12, padding: '12px', fontSize: 14, fontWeight: 600, cursor: 'pointer', color: 'var(--ink3)', fontFamily: 'var(--font-syne)' }}>
-            + Agregar miembro
+            onClick={() => setStep(2)}
+            disabled={!householdName}
+            style={{ width: '100%', height: 52, background: 'var(--title)', color: '#fff', border: 'none', borderRadius: 'var(--r-sm)', fontSize: 15, fontWeight: 700, cursor: 'pointer', opacity: !householdName ? .4 : 1 }}>
+            Continuar →
           </button>
-
+        ) : (
           <div style={{ display: 'flex', gap: 10 }}>
             <button
               onClick={() => setStep(1)}
-              style={{ flex: 1, background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 12, padding: '14px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-syne)' }}>
+              style={{ flex: 1, height: 52, background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 'var(--r-sm)', fontSize: 15, fontWeight: 600, cursor: 'pointer', color: 'var(--body)' }}>
               ← Atrás
             </button>
             <button
               onClick={createHousehold}
               disabled={!sharesOk || loading}
-              style={{ flex: 2, background: 'var(--ink)', color: '#fff', border: 'none', borderRadius: 12, padding: '14px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-syne)', opacity: !sharesOk || loading ? .5 : 1 }}>
-              {loading ? 'Creando...' : 'Crear hogar 🏠'}
+              style={{ flex: 2, height: 52, background: 'var(--title)', color: '#fff', border: 'none', borderRadius: 'var(--r-sm)', fontSize: 15, fontWeight: 700, cursor: 'pointer', opacity: !sharesOk || loading ? .4 : 1 }}>
+              {loading ? 'Creando...' : 'Crear hogar'}
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
