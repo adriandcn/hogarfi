@@ -1,28 +1,53 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
 
 :root {
-  --bg:       #f5f2ee;
-  --surface:  #ffffff;
-  --surface2: #ede9e3;
-  --border:   #ddd9d2;
-  --ink:      #1a1814;
-  --ink2:     #6b6560;
-  --ink3:     #a09a94;
-  --lime:     #b8f04a;
-  --lime-dk:  #7ab830;
-  --coral:    #ff6b4a;
-  --sky:      #4a9eff;
-  --gold:     #f5a623;
+  --font: 'Plus Jakarta Sans', sans-serif;
+  --mono: 'DM Mono', monospace;
+
+  --white:    #ffffff;
+  --off:      #f7f6f3;
+  --soft:     #eeece8;
+  --border:   #e2dfd8;
+  --muted:    #9b9690;
+  --body:     #3d3a35;
+  --title:    #1a1814;
+  --black:    #0f0e0c;
+
+  --green:    #c9f26a;
+  --green-dk: #5a8a00;
+  --red:      #ff5a3c;
+  --red-lt:   #fff1ee;
+  --blue:     #3b82f6;
+
+  --bg:       var(--off);
+  --surface:  var(--white);
+  --surface2: var(--soft);
+
+  --r-sm:   10px;
+  --r-md:   16px;
+  --r-lg:   24px;
+  --r-full: 999px;
 }
 
-body {
-  background: var(--bg);
-  color: var(--ink);
-  font-family: var(--font-instrument), sans-serif;
+html, body {
+  font-family: var(--font);
+  background: var(--off);
+  color: var(--title);
+  -webkit-font-smoothing: antialiased;
 }
-@keyframes spin {
-  to { transform: rotate(360deg); }
+
+input, button, select, textarea {
+  font-family: var(--font);
 }
-body {
-  background: #e8e4de;
+
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
 }
