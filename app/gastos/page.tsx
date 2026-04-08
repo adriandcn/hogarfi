@@ -49,8 +49,6 @@ export default async function GastosPage() {
         <div style={{ fontFamily: 'var(--font-syne)', fontSize: 24, fontWeight: 800, color: '#fff', marginBottom: 16 }}>
           Gastos del hogar
         </div>
-
-        {/* Balance chips por miembro */}
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
           {members.map(m => {
             const bal = balances[m.id]
@@ -71,45 +69,44 @@ export default async function GastosPage() {
         </div>
       </div>
 
-      {/* BALANCE GLOBAL */}
+      {/* BALANCE GLOBAL COMPACTO */}
       <div style={{ margin: '14px 20px 0' }}>
         {myNet > 0 ? (
-          <div style={{ background: 'rgba(184,240,74,.08)', border: '1px solid rgba(184,240,74,.25)', borderRadius: 14, padding: '14px 16px' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#7ab830', marginBottom: 2 }}>
-              Tu balance total este mes
+          <div style={{ background: 'rgba(184,240,74,.08)', border: '1px solid rgba(184,240,74,.25)', borderRadius: 14, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#7ab830', marginBottom: 2 }}>Tu balance este mes</div>
+              <div style={{ fontSize: 12, color: 'var(--ink3)' }}>
+                {reimbursements.filter(r => r.to === myMemberId).map(r => {
+                  const from = members.find(m => m.id === r.from)
+                  const fromName = (from?.name ?? from?.user?.name ?? 'Miembro').split(' ')[0]
+                  return fromName + ' te debe $' + r.amount.toFixed(0)
+                }).join(' · ') || 'Sin deudas pendientes'}
+              </div>
             </div>
-            <div style={{ fontFamily: 'var(--font-syne)', fontSize: 28, fontWeight: 800, color: '#7ab830', marginBottom: 4 }}>
-              +${myNet.toFixed(2)} a tu favor
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--ink3)' }}>
-              {reimbursements.filter(r => r.to === myMemberId).map(r => {
-                const from = members.find(m => m.id === r.from)
-                const fromName = (from?.name ?? from?.user?.name ?? 'Miembro').split(' ')[0]
-                return `${fromName} te debe $${r.amount.toFixed(0)}`
-              }).join(' · ') || 'Sin transferencias pendientes'}
+            <div style={{ fontFamily: 'var(--font-syne)', fontSize: 22, fontWeight: 800, color: '#7ab830', flexShrink: 0 }}>
+              +${myNet.toFixed(0)}
             </div>
           </div>
         ) : myNet < 0 ? (
-          <div style={{ background: 'rgba(255,107,74,.06)', border: '1px solid rgba(255,107,74,.2)', borderRadius: 14, padding: '14px 16px' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--coral)', marginBottom: 2 }}>
-              Tu balance total este mes
+          <div style={{ background: 'rgba(255,107,74,.06)', border: '1px solid rgba(255,107,74,.2)', borderRadius: 14, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--coral)', marginBottom: 2 }}>Tu balance este mes</div>
+              <div style={{ fontSize: 12, color: 'var(--ink3)' }}>
+                {reimbursements.filter(r => r.from === myMemberId).map(r => {
+                  const to = members.find(m => m.id === r.to)
+                  const toName = (to?.name ?? to?.user?.name ?? 'Miembro').split(' ')[0]
+                  return 'Debes $' + r.amount.toFixed(0) + ' a ' + toName
+                }).join(' · ') || 'Sin deudas pendientes'}
+              </div>
             </div>
-            <div style={{ fontFamily: 'var(--font-syne)', fontSize: 28, fontWeight: 800, color: 'var(--coral)', marginBottom: 4 }}>
-              -${Math.abs(myNet).toFixed(2)} debes
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--ink3)' }}>
-              {reimbursements.filter(r => r.from === myMemberId).map(r => {
-                const to = members.find(m => m.id === r.to)
-                const toName = (to?.name ?? to?.user?.name ?? 'Miembro').split(' ')[0]
-                return `Debes $${r.amount.toFixed(0)} a ${toName}`
-              }).join(' · ') || 'Sin transferencias pendientes'}
+            <div style={{ fontFamily: 'var(--font-syne)', fontSize: 22, fontWeight: 800, color: 'var(--coral)', flexShrink: 0 }}>
+              -${Math.abs(myNet).toFixed(0)}
             </div>
           </div>
         ) : (
-          <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink3)' }}>
-              Tu balance: $0 — todo en orden
-            </div>
+          <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: 12, color: 'var(--ink3)' }}>Tu balance este mes</div>
+            <div style={{ fontFamily: 'var(--font-syne)', fontSize: 16, fontWeight: 700 }}>$0 — todo OK</div>
           </div>
         )}
       </div>
@@ -136,7 +133,6 @@ export default async function GastosPage() {
             {expenses.map((exp, i) => {
               const payer = members.find(m => m.id === exp.paidById)
               const payerName = (payer?.name ?? payer?.user?.name ?? 'Miembro').split(' ')[0]
-
               return (
                 <div key={exp.id} style={{ background: 'var(--surface)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, borderTop: i > 0 ? '1px solid var(--border)' : 'none', borderRadius: i === 0 ? '14px 14px 0 0' : i === expenses.length - 1 ? '0 0 14px 14px' : 0 }}>
                   <div style={{ width: 42, height: 42, borderRadius: 12, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
@@ -154,7 +150,7 @@ export default async function GastosPage() {
                         {payerName} pago
                       </span>
                       <span style={{ color: 'var(--border)' }}>·</span>
-                      <span style={{ display: 'inline-flex', gap: 4 }}>
+                      <span style={{ display: 'inline-flex', gap: 4, flexWrap: 'wrap' }}>
                         {exp.splits.map(s => {
                           const sm = members.find(m => m.id === s.memberId)
                           const sName = (sm?.name ?? sm?.user?.name ?? '?').split(' ')[0]
