@@ -56,7 +56,7 @@ export default function QuickExpenseForm({ token, householdId, householdName, me
             style={{ width: '100%', background: 'var(--ink)', color: '#fff', border: 'none', borderRadius: 12, padding: '14px', fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 12 }}>
             Agregar otro gasto
           </button>
-          
+          <a>
             href={'/login?callbackUrl=/invite/' + token}
             style={{ display: 'block', textAlign: 'center', padding: '13px', fontSize: 14, fontWeight: 600, color: 'var(--ink3)', border: '1.5px solid var(--border)', borderRadius: 12, textDecoration: 'none' }}>
             Registrarme para ver todo
