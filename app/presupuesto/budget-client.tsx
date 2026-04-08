@@ -148,10 +148,11 @@ export default function BudgetClient({ isSetup = false }: { isSetup?: boolean })
             </div>
           </div>
           
-            href="/dashboard"
-            style={{ display: 'block', textAlign: 'center', padding: '13px', fontSize: 14, fontWeight: 600, color: 'var(--muted)', border: '1.5px solid var(--border)', borderRadius: 'var(--r-sm)', textDecoration: 'none', marginBottom: 4 }}>
-            Saltar por ahora — ir al dashboard 
-          </a>
+            <button
+  onClick={() => window.location.href = '/dashboard'}
+  style={{ width: '100%', display: 'block', textAlign: 'center', padding: '13px', fontSize: 14, fontWeight: 600, color: 'var(--muted)', border: '1.5px solid var(--border)', borderRadius: 'var(--r-sm)', background: 'transparent', cursor: 'pointer', marginBottom: 4 }}>
+  Saltar por ahora
+</button>
         </div>
       )}
 
