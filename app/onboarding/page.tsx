@@ -37,7 +37,7 @@ export default function OnboardingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: householdName, members: allMembers }),
       })
-      if (res.ok) router.push('/presupuesto?setup=true')
+      if (res.ok) router.push('/welcome')
       else { alert('Error creando el hogar'); setLoading(false) }
     } catch {
       alert('Error de conexion')
