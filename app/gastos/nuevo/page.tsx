@@ -40,17 +40,13 @@ export default async function GastosPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--off)', paddingBottom: 100 }}>
 
-      {/* HEADER */}
       <div style={{ background: 'var(--title)', padding: '52px 20px 20px' }}>
         <div style={{ fontSize: 24, fontWeight: 800, color: '#fff', letterSpacing: '-.02em', marginBottom: 16 }}>
           Gastos del hogar
         </div>
-
-        {/* Balance chips */}
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
           {members.map(m => {
-            const bal = balances[m.id]
-            const total = bal?.total ?? 0
+            const total = balances[m.id]?.total ?? 0
             const name = (m.name ?? m.user?.name ?? '?').split(' ')[0]
             return (
               <div key={m.id} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 999, padding: '6px 12px 6px 8px' }}>
@@ -69,7 +65,6 @@ export default async function GastosPage() {
 
       <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-        {/* MI BALANCE */}
         {myNet !== 0 && (
           <div style={{ background: myNet > 0 ? 'rgba(201,242,106,.1)' : 'rgba(255,90,60,.05)', border: '1px solid ' + (myNet > 0 ? 'rgba(201,242,106,.3)' : 'rgba(255,90,60,.2)'), borderRadius: 14, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
@@ -95,7 +90,6 @@ export default async function GastosPage() {
           </div>
         )}
 
-        {/* HEADER LISTA */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: 15, fontWeight: 700 }}>
             {expenses.length} gasto{expenses.length !== 1 ? 's' : ''}
@@ -105,7 +99,6 @@ export default async function GastosPage() {
           </a>
         </div>
 
-        {/* LISTA */}
         {expenses.length === 0 ? (
           <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, padding: '40px 20px', textAlign: 'center' }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>💳</div>
@@ -128,8 +121,8 @@ export default async function GastosPage() {
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       <span>{payerName} pago</span>
-                      <span style={{ color: 'var(--border)' }}>·</span>
-                      <span style={{ display: 'flex', gap: 4 }}>
+                      <span>·</span>
+                      <span style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                         {exp.splits.map(s => {
                           const sm = members.find(m => m.id === s.memberId)
                           const sName = (sm?.name ?? sm?.user?.name ?? '?').split(' ')[0]
