@@ -1,18 +1,13 @@
 import { auth } from '@/lib/auth'
-import { headers } from 'next/headers'
 import { prisma } from '@/lib/prisma'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getBalances, getSuggestedReimbursements } from '@/lib/balances'
 
 export default async function DashboardPage() {
-  // Obtener sesión
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
-
+  const session = await auth.api.getSession({ headers: await headers() })
   if (!session) redirect('/login')
 
-  // Buscar hogar del usuario
   const member = await prisma.householdMember.findFirst({
     where: { userId: session.user.id },
     include: {
@@ -22,7 +17,6 @@ export default async function DashboardPage() {
           expenses: {
             include: { splits: true, category: true },
             orderBy: { createdAt: 'desc' },
-            take: 10,
           },
           budgets: { include: { category: true } },
         },
@@ -30,103 +24,213 @@ export default async function DashboardPage() {
     },
   })
 
-  // Si no tiene hogar, redirigir a crear uno
   if (!member) redirect('/onboarding')
 
   const household = member.household
-  const expenses = household.expenses
   const members = household.members
+  const expenses = household.expenses
+  const myMemberId = member.id
+
+  const now = new Date()
+  const month = now.getMonth()
+  const year = now.getFullYear()
+  const monthExpenses = expenses.filter(e => {
+    const d = new Date(e.createdAt)
+    return d.getMonth() === month && d.getFullYear() === year
+  })
 
   const balances = getBalances(expenses as any)
   const reimbursements = getSuggestedReimbursements(balances)
+  const myBalance = balances[myMemberId]
+  const myNet = myBalance?.total ?? 0
 
-  const totalSpent = household.budgets.reduce((s, b) => s + b.amount, 0)
-  const totalBudget = household.budgets.reduce((s, b) => s + b.amount, 0)
-  const remaining = totalBudget - totalSpent
-  const pct = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0
+  const totalSpent = monthExpenses.reduce((s, e) => s + e.amount, 0)
+
+  const budgetByCategory: Record<string, number> = {}
+  for (const b of household.budgets) {
+    if (b.month === month + 1 && b.year === year) {
+      budgetByCategory[b.categoryId] = b.amount
+    }
+  }
+  const totalBudget = Object.values(budgetByCategory).reduce((s, v) => s + v, 0)
+  const budgetRemaining = totalBudget - totalSpent
+  const budgetPct = totalBudget > 0 ? Math.min(Math.round((totalSpent / totalBudget) * 100), 100) : 0
+
+  const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+  const myName = (member.name ?? session.user.name ?? 'tú').split(' ')[0]
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', maxWidth: 430, margin: '0 auto' }}>
-      <div style={{ background: 'var(--ink)', padding: '28px 20px 24px' }}>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 20 }}>
-          {new Date().toLocaleString('es', { month: 'long', year: 'numeric' })}
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 }}>
+    <div style={{ minHeight: '100vh', background: 'var(--off)', paddingBottom: 90 }}>
+
+      {/* HEADER */}
+      <div style={{ padding: '56px 20px 20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.5)', marginBottom: 4 }}>
-              {household.name}
+            <div style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500, marginBottom: 4 }}>
+              {household.name} · {monthNames[month]} {year}
             </div>
-            <div style={{ fontFamily: 'var(--font-syne)', fontSize: 46, fontWeight: 800, color: '#fff', letterSpacing: '-.04em', lineHeight: 1 }}>
-              <span style={{ fontSize: 20, opacity: .6 }}>$</span>{remaining.toFixed(0)}
-            </div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.45)', marginTop: 4 }}>
-              presupuesto restante
+            <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.02em', lineHeight: 1.2 }}>
+              Hola, {myName} 👋
             </div>
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontFamily: 'var(--font-syne)', fontSize: 28, fontWeight: 800, color: '#b8f04a' }}>
-              {expenses.length}
-            </div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.45)' }}>gastos este mes</div>
+          <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 700, color: 'var(--title)', flexShrink: 0 }}>
+            {myName[0]}
           </div>
         </div>
 
-        {/* Members */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {members.map(m => (
-            <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 99, padding: '6px 12px 6px 6px' }}>
-              <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#b8f04a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#1a1814' }}>
-             {(m.name ?? m.user?.name ?? '?')[0]}
+        {/* BALANCE CARD */}
+        <div style={{ background: 'var(--title)', borderRadius: 20, padding: '20px', marginBottom: 12 }}>
+          {totalBudget > 0 ? (
+            <>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.4)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+                Presupuesto restante
               </div>
-             <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,.8)' }}>{m.name ?? m.user?.name ?? 'Sin nombre'}</span>
-<span style={{ fontSize: 11, color: 'rgba(255,255,255,.4)' }}>{m.defaultShare}%</span>
-            </div>
-          ))}
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 44, fontWeight: 500, color: '#fff', letterSpacing: '-.02em', lineHeight: 1, marginBottom: 8 }}>
+                ${budgetRemaining.toFixed(0)}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,.4)' }}>
+                  de ${totalBudget.toFixed(0)} · {budgetPct}% usado
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', background: budgetPct > 90 ? 'rgba(255,90,60,.2)' : 'rgba(201,242,106,.15)', color: budgetPct > 90 ? '#ff8a70' : 'var(--green)', borderRadius: 999 }}>
+                  {budgetPct > 90 ? 'Cerca del límite' : 'Al día'}
+                </div>
+              </div>
+              <div style={{ height: 4, background: 'rgba(255,255,255,.08)', borderRadius: 999, overflow: 'hidden' }}>
+                <div style={{ height: '100%', background: budgetPct > 90 ? 'var(--red)' : 'var(--green)', borderRadius: 999, width: budgetPct + '%', transition: 'width .6s' }} />
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.4)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+                Gastado este mes
+              </div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 44, fontWeight: 500, color: '#fff', letterSpacing: '-.02em', lineHeight: 1, marginBottom: 12 }}>
+                ${totalSpent.toFixed(0)}
+              </div>
+              <a href="/presupuesto" style={{ fontSize: 13, color: 'rgba(255,255,255,.45)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                Configurar presupuesto →
+              </a>
+            </>
+          )}
+        </div>
+
+        {/* MEMBER CHIPS */}
+        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+          {members.map(m => {
+            const bal = balances[m.id]
+            const total = bal?.total ?? 0
+            const name = (m.name ?? m.user?.name ?? '?').split(' ')[0]
+            return (
+              <div key={m.id} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6, background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 999, padding: '6px 12px 6px 8px' }}>
+                <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'var(--title)' }}>
+                  {name[0]}
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--body)' }}>{name}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: total >= 0 ? 'var(--green-dk)' : 'var(--red)' }}>
+                  {total >= 0 ? '+' : ''}${Math.abs(total).toFixed(0)}
+                </span>
+              </div>
+            )
+          })}
         </div>
       </div>
 
-      {/* Sin datos aún */}
-      {expenses.length === 0 && (
-        <div style={{ padding: '40px 20px', textAlign: 'center' }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>🏠</div>
-          <div style={{ fontFamily: 'var(--font-syne)', fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
-            Bienvenido a {household.name}
+      {/* MY BALANCE */}
+      {myNet !== 0 && (
+        <div style={{ margin: '0 20px 16px' }}>
+          <div style={{ background: myNet > 0 ? 'rgba(201,242,106,.1)' : 'rgba(255,90,60,.05)', border: '1px solid ' + (myNet > 0 ? 'rgba(201,242,106,.3)' : 'rgba(255,90,60,.2)'), borderRadius: 14, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: myNet > 0 ? 'var(--green-dk)' : 'var(--red)', marginBottom: 2, letterSpacing: '.04em', textTransform: 'uppercase' }}>
+                Tu balance
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--muted)' }}>
+                {myNet > 0
+                  ? reimbursements.filter(r => r.to === myMemberId).map(r => {
+                      const from = members.find(m => m.id === r.from)
+                      return (from?.name ?? from?.user?.name ?? '?').split(' ')[0] + ' te debe $' + r.amount.toFixed(0)
+                    }).join(' · ') || 'Sin transferencias pendientes'
+                  : reimbursements.filter(r => r.from === myMemberId).map(r => {
+                      const to = members.find(m => m.id === r.to)
+                      return 'Debes $' + r.amount.toFixed(0) + ' a ' + (to?.name ?? to?.user?.name ?? '?').split(' ')[0]
+                    }).join(' · ') || 'Sin transferencias pendientes'
+                }
+              </div>
+            </div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 500, color: myNet > 0 ? 'var(--green-dk)' : 'var(--red)', flexShrink: 0 }}>
+              {myNet > 0 ? '+' : ''}${myNet.toFixed(0)}
+            </div>
           </div>
-          <div style={{ fontSize: 14, color: 'var(--ink3)', marginBottom: 24 }}>
-            Agrega tu primer gasto para empezar
-          </div>
-          <a href="/gastos/nuevo" style={{ background: 'var(--ink)', color: '#fff', borderRadius: 12, padding: '14px 24px', fontSize: 15, fontWeight: 600, textDecoration: 'none', fontFamily: 'var(--font-syne)' }}>
-            + Agregar primer gasto
-          </a>
         </div>
       )}
 
-      {/* Gastos recientes */}
-      {expenses.length > 0 && (
-        <div style={{ padding: '16px 20px', paddingBottom: 100 }}>
-          <div style={{ fontFamily: 'var(--font-syne)', fontSize: 13, fontWeight: 700, marginBottom: 12 }}>
-            Últimos gastos
+      {/* STATS */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, margin: '0 20px 16px' }}>
+        <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px' }}>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Gastado</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 24, fontWeight: 500, color: 'var(--red)' }}>${totalSpent.toFixed(0)}</div>
+        </div>
+        <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px' }}>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Gastos</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 24, fontWeight: 500 }}>{monthExpenses.length}</div>
+        </div>
+      </div>
+
+      {/* ULTIMOS GASTOS */}
+      <div style={{ padding: '0 20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>Ultimos gastos</div>
+          <a href="/gastos" style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500, textDecoration: 'none' }}>Ver todos →</a>
+        </div>
+
+        {expenses.length === 0 ? (
+          <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, padding: '32px 20px', textAlign: 'center' }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>💳</div>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>Sin gastos aun</div>
+            <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20 }}>Agrega tu primer gasto del hogar</div>
+            <a href="/gastos/nuevo" style={{ display: 'inline-block', background: 'var(--title)', color: '#fff', borderRadius: 999, padding: '10px 20px', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+              + Agregar gasto
+            </a>
           </div>
-          <div style={{ borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            {expenses.map((exp, i) => (
-              <div key={exp.id} style={{ background: 'var(--surface)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
-                <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
-                  {exp.category?.icon ?? '💳'}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500 }}>{exp.description}</div>
-                  <div style={{ fontSize: 11, color: 'var(--ink3)' }}>
-                    {new Date(exp.createdAt).toLocaleDateString('es')}
+        ) : (
+          <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+            {expenses.slice(0, 4).map((exp, i) => {
+              const payer = members.find(m => m.id === exp.paidById)
+              const payerName = (payer?.name ?? payer?.user?.name ?? '?').split(' ')[0]
+              const mySplit = exp.splits.find(s => s.memberId === myMemberId)
+              const iOwe = exp.paidById !== myMemberId && mySplit && mySplit.amount > 0
+              const iAmOwed = exp.paidById === myMemberId && mySplit && exp.amount > mySplit.amount
+
+              return (
+                <div key={exp.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+                    {exp.category?.icon ?? '💳'}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {exp.description}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                      {payerName} pago · {new Date(exp.createdAt).toLocaleDateString('es', { day: 'numeric', month: 'short' })}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 15, fontWeight: 500 }}>
+                      ${exp.amount.toFixed(0)}
+                    </div>
+                    {mySplit && (
+                      <div style={{ fontSize: 11, fontWeight: 600, color: iOwe ? 'var(--red)' : iAmOwed ? 'var(--green-dk)' : 'var(--muted)' }}>
+                        {iOwe ? 'debes $' + mySplit.amount.toFixed(0) : iAmOwed ? 'te deben $' + (exp.amount - mySplit.amount).toFixed(0) : 'pagado'}
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div style={{ fontFamily: 'var(--font-syne)', fontSize: 15, fontWeight: 700 }}>
-                  ${exp.amount.toFixed(2)}
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
+
     </div>
   )
 }
