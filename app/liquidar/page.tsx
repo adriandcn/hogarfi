@@ -104,7 +104,7 @@ export default async function LiquidarPage() {
             {members.map((m, i) => {
               const bal = balances[m.id]
               const name = (m.name ?? m.user?.name ?? 'Miembro').split(' ')[0]
-              const corresponds = totalSpent * m.defaultShare / 100
+              const corresponds = bal?.paidFor ?? 0
               const diff = (bal?.paid ?? 0) - corresponds
               return (
                 <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '13px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
