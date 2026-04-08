@@ -69,33 +69,33 @@ export default function QuickExpenseForm({
     setSaving(false)
   }
 
-  if (saved) {
-    return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', maxWidth: 430, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
-          <div style={{ fontFamily: 'var(--font-syne)', fontSize: 24, fontWeight: 800, marginBottom: 8 }}>
-            Gasto guardado
-          </div>
-          <div style={{ fontSize: 14, color: 'var(--ink3)', marginBottom: 32 }}>
-            ${parseFloat(amount).toFixed(2)} agregado a {householdName}
-          </div>
-          <button
-            onClick={() => { setSaved(false); setAmount(''); setDescription('') }}
-            style={{ width: '100%', background: 'var(--ink)', color: '#fff', border: 'none', borderRadius: 12, padding: '14px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-syne)', marginBottom: 12 }}>
-            Agregar otro gasto
-          </button>
-          
-            href={'/login?callbackUrl=/invite/' + token}
-            style={{ display: 'block', textAlign: 'center', padding: '13px', fontSize: 14, fontWeight: 600, color: 'var(--ink3)', border: '1.5px solid var(--border)', borderRadius: 12, textDecoration: 'none' }}>
-            Registrarme para ver todo
-          </a>
-        </div>
-      </div>
-    )
-  }
+  const registerUrl = '/login?callbackUrl=/invite/' + token
 
-  return (
+  const savedView = (
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', maxWidth: 430, margin: '0 auto' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
+        <div style={{ fontFamily: 'var(--font-syne)', fontSize: 24, fontWeight: 800, marginBottom: 8 }}>
+          Gasto guardado
+        </div>
+        <div style={{ fontSize: 14, color: 'var(--ink3)', marginBottom: 32 }}>
+          Agregado a {householdName}
+        </div>
+        <button
+          onClick={() => { setSaved(false); setAmount(''); setDescription('') }}
+          style={{ width: '100%', background: 'var(--ink)', color: '#fff', border: 'none', borderRadius: 12, padding: '14px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-syne)', marginBottom: 12 }}>
+          Agregar otro gasto
+        </button>
+        
+          href={registerUrl}
+          style={{ display: 'block', textAlign: 'center', padding: '13px', fontSize: 14, fontWeight: 600, color: 'var(--ink3)', border: '1.5px solid var(--border)', borderRadius: 12, textDecoration: 'none' }}>
+          Registrarme para ver todo
+        </a>
+      </div>
+    </div>
+  )
+
+  const formView = (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', maxWidth: 430, margin: '0 auto' }}>
       <div style={{ background: 'var(--ink)', padding: '24px 20px 20px' }}>
         <div style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 4 }}>
@@ -178,4 +178,6 @@ export default function QuickExpenseForm({
       </div>
     </div>
   )
+
+  return saved ? savedView : formView
 }
