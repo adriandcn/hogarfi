@@ -107,10 +107,10 @@ export default function QuickExpenseForm({
           Agregar otro gasto
         </button>
         
-          href={`/login?callbackUrl=/invite/${token}`}
-          style={{ display: 'block', background: 'transparent', color: 'var(--ink3)', border: '1.5px solid var(--border)', borderRadius: 12, padding: '13px 24px', fontSize: 14, fontWeight: 600, textDecoration: 'none', textAlign: 'center' }}>
-          Registrarme para ver todo el hogar
-        </a>
+          href={'/login?callbackUrl=/invite/' + token}
+  style={{ display: 'block', background: 'transparent', color: 'var(--ink3)', border: '1.5px solid var(--border)', borderRadius: 12, padding: '13px 24px', fontSize: 14, fontWeight: 600, textDecoration: 'none', textAlign: 'center' }}>
+  {'Registrarme para ver todo el hogar'}
+</a>
       </div>
     </div>
   )
