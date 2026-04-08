@@ -4,7 +4,8 @@ import { redirect } from 'next/navigation'
 import CopyButton from './copy-button'
 
 async function getInvitations() {
-  const res = await fetch(`${process.env.BETTER_AUTH_URL}/api/household/invite`, {
+  const baseUrl = process.env.BETTER_AUTH_URL ?? 'http://localhost:3000'
+  const res = await fetch(`${baseUrl}/api/household/invite`, {
     headers: { cookie: (await headers()).get('cookie') ?? '' },
     cache: 'no-store',
   })
@@ -18,48 +19,50 @@ export default async function InvitarPage() {
   const data = await getInvitations()
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', maxWidth: 430, margin: '0 auto' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--off)', paddingBottom: 100 }}>
 
-      <div style={{ background: 'var(--ink)', padding: '24px 20px 20px' }}>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 6 }}>
-          {data.householdName}
-        </div>
-        <div style={{ fontFamily: 'var(--font-syne)', fontSize: 24, fontWeight: 800, color: '#fff' }}>
+      <div style={{ background: 'var(--title)', padding: '52px 20px 20px' }}>
+        <div style={{ fontSize: 24, fontWeight: 800, color: '#fff', letterSpacing: '-.02em', marginBottom: 4 }}>
           Invitar miembros
+        </div>
+        <div style={{ fontSize: 14, color: 'rgba(255,255,255,.4)' }}>
+          {data.householdName}
         </div>
       </div>
 
-      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 12, paddingBottom: 100 }}>
+      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-        <div style={{ fontSize: 13, color: 'var(--ink3)', marginBottom: 4 }}>
-          Comparte estos links con cada miembro para que puedan unirse al hogar con su cuenta de Google.
+        <div style={{ background: 'rgba(201,242,106,.08)', border: '1px solid rgba(201,242,106,.25)', borderRadius: 14, padding: '14px 16px' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--green-dk)', marginBottom: 4 }}>
+            Como funciona
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6 }}>
+            Comparte el link con cada miembro. Pueden agregar gastos sin registrarse, o registrarse para ver todo el hogar.
+          </div>
         </div>
 
         {data.invitations?.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
-            <div style={{ fontFamily: 'var(--font-syne)', fontSize: 16, fontWeight: 700 }}>
-              Todos los miembros ya están unidos
-            </div>
+          <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, padding: '40px 20px', textAlign: 'center' }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>✅</div>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>Todos unidos</div>
+            <div style={{ fontSize: 13, color: 'var(--muted)' }}>Todos los miembros ya tienen su link</div>
           </div>
         )}
 
         {data.invitations?.map((inv: any) => (
-          <div key={inv.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '18px' }}>
+          <div key={inv.id} style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, padding: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: 'var(--ink3)' }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, color: 'var(--muted)', flexShrink: 0 }}>
                 {inv.memberName[0]}
               </div>
               <div>
                 <div style={{ fontSize: 15, fontWeight: 600 }}>{inv.memberName}</div>
-                <div style={{ fontSize: 11, color: 'var(--ink3)' }}>Invitación pendiente</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)' }}>Invitacion pendiente</div>
               </div>
             </div>
-
-            <div style={{ background: 'var(--surface2)', borderRadius: 8, padding: '10px 12px', marginBottom: 10, fontSize: 12, color: 'var(--ink3)', wordBreak: 'break-all', fontFamily: 'monospace' }}>
+            <div style={{ background: 'var(--soft)', borderRadius: 8, padding: '10px 12px', marginBottom: 10, fontSize: 11, color: 'var(--muted)', wordBreak: 'break-all', fontFamily: 'var(--mono)' }}>
               {inv.link}
             </div>
-
             <CopyButton link={inv.link} name={inv.memberName} />
           </div>
         ))}
@@ -67,4 +70,3 @@ export default async function InvitarPage() {
     </div>
   )
 }
-
