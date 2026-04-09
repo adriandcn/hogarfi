@@ -9,11 +9,9 @@ export default function NuevoGastoPage() {
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
   const [members, setMembers] = useState<Member[]>([])
-  const [myMemberId, setMyMemberId] = useState('')
   const [householdId, setHouseholdId] = useState('')
-  const [tab, setTab] = useState<'uno' | 'default' | 'monto' | 'custom'>('uno')
   const [payerId, setPayerId] = useState('')
-  const [customShares, setCustomShares] = useState<Record<string, number>>({})
+  const [multiPago, setMultiPago] = useState(false)
   const [memberAmounts, setMemberAmounts] = useState<Record<string, number>>({})
   const [category, setCategory] = useState('Comida')
   const [saving, setSaving] = useState(false)
@@ -31,22 +29,23 @@ export default function NuevoGastoPage() {
     { name: 'Otro', icon: '📦' },
   ]
 
+  const colors = [
+    { bg: '#c9f26a', color: '#1a1814' },
+    { bg: '#dbeafe', color: '#1e40af' },
+    { bg: '#fef3c7', color: '#92400e' },
+    { bg: '#ede9fe', color: '#5b21b6' },
+  ]
+
   useEffect(() => {
     fetch('/api/household/me')
       .then(r => r.json())
       .then(data => {
         if (data.members) {
           setMembers(data.members)
-          setMyMemberId(data.myMemberId)
           setHouseholdId(data.householdId)
           setPayerId(data.myMemberId)
-          const shares: Record<string, number> = {}
           const amounts: Record<string, number> = {}
-          data.members.forEach((m: Member) => {
-            shares[m.id] = m.defaultShare
-            amounts[m.id] = 0
-          })
-          setCustomShares(shares)
+          data.members.forEach((m: Member) => { amounts[m.id] = 0 })
           setMemberAmounts(amounts)
         }
         setLoadingMembers(false)
@@ -55,24 +54,11 @@ export default function NuevoGastoPage() {
   }, [])
 
   const amountNum = parseFloat(amount) || 0
-  const totalCustom = Object.values(customShares).reduce((s, v) => s + v, 0)
-  const customOk = Math.abs(totalCustom - 100) < 0.5
   const totalMonto = Object.values(memberAmounts).reduce((s, v) => s + v, 0)
-  const montoOk = amountNum > 0 && Math.abs(totalMonto - amountNum) < 0.5
+  const montoOk = Math.abs(totalMonto - amountNum) < 0.5
 
-  const colors = [
-    { bg: '#c9f26a', color: '#1a1814' },
-    { bg: '#dbeafe', color: '#1e40af' },
-    { bg: '#fef3c7', color: '#92400e' },
-    { bg: '#ede9fe', color: '#5b21b6' },
-  ]
-
-  const tabLabels: Record<string, string> = {
-    uno: 'Uno pago',
-    default: 'Por defecto',
-    monto: 'Por monto',
-    custom: 'Personalizado',
-  }
+  const isDisabled = !amount || !description || saving ||
+    (multiPago && !montoOk)
 
   async function handleReceipt(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -100,33 +86,35 @@ export default function NuevoGastoPage() {
   }
 
   async function handleSave() {
-    if (!amount || !description || !payerId) return
+    if (!amount || !description) return
     setSaving(true)
 
-    const splits = members.map(m => {
-      let pct = 0
-      if (tab === 'custom') {
-        pct = customShares[m.id] ?? 0
-      } else if (tab === 'monto') {
-        pct = amountNum > 0 ? Math.round((memberAmounts[m.id] ?? 0) / amountNum * 100) : 0
-      } else {
-        pct = m.defaultShare
-      }
-      return {
-        memberId: m.id,
-        percentage: pct,
-        amount: amountNum * pct / 100,
-      }
-    })
-
-    const catIcon = cats.find(c => c.name === category)?.icon ?? '📦'
-
-    // payer es quien mas pago en modo monto
+    let splits
     let finalPayerId = payerId
-    if (tab === 'monto') {
+
+    if (multiPago) {
+      // Varios pagaron — splits basados en montos ingresados
+      splits = members.map(m => {
+        const pct = amountNum > 0 ? Math.round((memberAmounts[m.id] ?? 0) / amountNum * 100) : 0
+        return {
+          memberId: m.id,
+          percentage: m.defaultShare, // el acuerdo del hogar siempre aplica al liquidar
+          amount: amountNum * m.defaultShare / 100,
+        }
+      })
+      // El que mas puso es el pagador principal
       const maxEntry = Object.entries(memberAmounts).sort((a, b) => b[1] - a[1])[0]
       if (maxEntry) finalPayerId = maxEntry[0]
+    } else {
+      // Un solo pagador — splits por porcentaje del hogar
+      splits = members.map(m => ({
+        memberId: m.id,
+        percentage: m.defaultShare,
+        amount: amountNum * m.defaultShare / 100,
+      }))
     }
+
+    const catIcon = cats.find(c => c.name === category)?.icon ?? '📦'
 
     const res = await fetch('/api/expense', {
       method: 'POST',
@@ -147,15 +135,13 @@ export default function NuevoGastoPage() {
     else alert('Error guardando el gasto')
   }
 
-  const isDisabled = !amount || !description || saving ||
-    (tab === 'custom' && !customOk) ||
-    (tab === 'monto' && !montoOk)
-
   if (loadingMembers) return (
     <div style={{ minHeight: '100vh', background: 'var(--off)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ fontSize: 14, color: 'var(--muted)' }}>Cargando...</div>
     </div>
   )
+
+  const payerName = members.find(m => m.id === payerId)?.name?.split(' ')[0] ?? 'alguien'
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--off)' }}>
@@ -168,13 +154,10 @@ export default function NuevoGastoPage() {
           <div style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>Nuevo gasto</div>
           <div style={{ width: 36 }} />
         </div>
-
         <div style={{ position: 'relative' }}>
           <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--mono)', fontSize: 24, color: 'rgba(255,255,255,.35)' }}>$</span>
           <input
-            type="number"
-            placeholder="0.00"
-            value={amount}
+            type="number" placeholder="0.00" value={amount}
             onChange={e => setAmount(e.target.value)}
             style={{ width: '100%', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 14, padding: '16px 16px 16px 44px', fontFamily: 'var(--mono)', fontSize: 32, fontWeight: 500, color: '#fff', outline: 'none' }}
           />
@@ -183,9 +166,9 @@ export default function NuevoGastoPage() {
 
       <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 160 }}>
 
-        {/* AI SCANNER */}
+        {/* SCANNER */}
         <div onClick={() => document.getElementById('receipt-input')?.click()}
-          style={{ border: '1.5px dashed var(--border)', borderRadius: 'var(--r-md)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: scanning ? 'default' : 'pointer', background: receipt ? 'rgba(201,242,106,.04)' : 'transparent' }}>
+          style={{ border: '1.5px dashed var(--border)', borderRadius: 'var(--r-md)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', background: receipt ? 'rgba(201,242,106,.04)' : 'transparent' }}>
           <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
             {scanning ? '⏳' : receipt ? '✅' : '📸'}
           </div>
@@ -194,7 +177,7 @@ export default function NuevoGastoPage() {
               {scanning ? 'Analizando con AI...' : receipt ? 'Recibo analizado' : 'Escanear recibo con AI'}
             </div>
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-              {scanning ? 'Extrayendo monto y descripcion...' : receipt ? 'Toca para cambiar' : 'Extrae monto y descripcion automaticamente'}
+              {scanning ? 'Extrayendo datos...' : 'Extrae monto y descripcion automaticamente'}
             </div>
           </div>
         </div>
@@ -204,9 +187,7 @@ export default function NuevoGastoPage() {
         <div>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>Descripcion</div>
           <input
-            type="text"
-            placeholder="ej. Supermercado, gasolina..."
-            value={description}
+            type="text" placeholder="ej. Supermercado, gasolina..." value={description}
             onChange={e => setDescription(e.target.value)}
             style={{ width: '100%', height: 50, background: 'var(--white)', border: '1.5px solid ' + (description ? 'var(--title)' : 'var(--border)'), borderRadius: 'var(--r-sm)', padding: '0 16px', fontSize: 15, color: 'var(--title)', outline: 'none' }}
           />
@@ -225,200 +206,89 @@ export default function NuevoGastoPage() {
           </div>
         </div>
 
-        {/* DIVISION */}
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>Division del gasto</div>
-
-          <div style={{ display: 'flex', background: 'var(--soft)', borderRadius: 10, padding: 3, gap: 2, marginBottom: 14 }}>
-            {(['uno', 'default', 'monto', 'custom'] as const).map(t => (
-              <button key={t} onClick={() => setTab(t)}
-                style={{ flex: 1, padding: '8px 4px', borderRadius: 8, border: 'none', background: tab === t ? 'var(--white)' : 'transparent', color: tab === t ? 'var(--title)' : 'var(--muted)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-                {tabLabels[t]}
-              </button>
-            ))}
-          </div>
-
-          {/* TAB UNO */}
-          {tab === 'uno' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.5, marginBottom: 4 }}>
-                Una persona pago el total. El balance se calcula automaticamente segun los porcentajes del hogar.
-              </div>
+        {/* QUIEN PAGO — solo si es un pagador */}
+        {!multiPago && (
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>Quien pago?</div>
+            <div style={{ display: 'flex', gap: 8 }}>
               {members.map((m, i) => {
                 const c = colors[i % colors.length]
                 const selected = payerId === m.id
-                const recover = amountNum * (1 - m.defaultShare / 100)
                 return (
-                  <div key={m.id} onClick={() => setPayerId(m.id)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 'var(--r-sm)', border: selected ? '2px solid var(--title)' : '1.5px solid var(--border)', background: 'var(--white)', cursor: 'pointer' }}>
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: selected ? 'var(--title)' : 'transparent', border: selected ? 'none' : '1.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      {selected && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--green)' }} />}
-                    </div>
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: c.color, flexShrink: 0 }}>
+                  <button key={m.id} onClick={() => setPayerId(m.id)}
+                    style={{ flex: 1, padding: '10px 8px', background: selected ? 'var(--title)' : 'var(--white)', border: '1.5px solid ' + (selected ? 'var(--title)' : 'var(--border)'), borderRadius: 'var(--r-sm)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: '50%', background: selected ? 'rgba(255,255,255,.15)' : c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: selected ? '#fff' : c.color }}>
                       {m.name[0]}
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>{m.name}</div>
-                      <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                        {amountNum > 0 ? 'Recupera $' + recover.toFixed(2) + ' del hogar' : 'Pago el 100%'}
-                      </div>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: selected ? '#fff' : 'var(--body)' }}>{m.name.split(' ')[0]}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* TODOS PUSIERON ALGO */}
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>Todos pusieron algo?</div>
+          <div style={{ display: 'flex', background: 'var(--soft)', borderRadius: 10, padding: 3, gap: 2 }}>
+            <button onClick={() => setMultiPago(false)}
+              style={{ flex: 1, padding: '9px', borderRadius: 8, border: 'none', background: !multiPago ? 'var(--white)' : 'transparent', color: !multiPago ? 'var(--title)' : 'var(--muted)', fontSize: 13, fontWeight: !multiPago ? 600 : 400, cursor: 'pointer' }}>
+              No, solo uno pago
+            </button>
+            <button onClick={() => setMultiPago(true)}
+              style={{ flex: 1, padding: '9px', borderRadius: 8, border: 'none', background: multiPago ? 'var(--white)' : 'transparent', color: multiPago ? 'var(--title)' : 'var(--muted)', fontSize: 13, fontWeight: multiPago ? 600 : 400, cursor: 'pointer' }}>
+              Si, varios pusieron
+            </button>
+          </div>
+        </div>
+
+        {/* MULTI PAGO */}
+        {multiPago && (
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>Cuanto puso cada uno?</div>
+            <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', overflow: 'hidden', marginBottom: 8 }}>
+              {members.map((m, i) => {
+                const c = colors[i % colors.length]
+                return (
+                  <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
+                    <div style={{ width: 34, height: 34, borderRadius: '50%', background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: c.color, flexShrink: 0 }}>
+                      {m.name[0]}
+                    </div>
+                    <div style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{m.name.split(' ')[0]}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ fontSize: 14, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>$</span>
+                      <input
+                        type="number" value={memberAmounts[m.id] || ''} placeholder="0"
+                        onChange={e => setMemberAmounts(prev => ({ ...prev, [m.id]: Number(e.target.value) }))}
+                        style={{ width: 80, height: 38, background: 'var(--soft)', border: '1.5px solid var(--border)', borderRadius: 8, fontSize: 15, fontWeight: 600, textAlign: 'right', paddingRight: 10, color: 'var(--title)', outline: 'none', fontFamily: 'var(--mono)' }}
+                      />
                     </div>
                   </div>
                 )
               })}
             </div>
-          )}
-
-          {/* TAB DEFAULT */}
-          {tab === 'default' && (
-            <div>
-              <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.5, marginBottom: 12 }}>
-                Cada miembro paga su porcentaje acordado. Refleja la distribucion justa segun los ingresos de cada uno.
-              </div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>Quien pago</div>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-                {members.map((m, i) => {
-                  const c = colors[i % colors.length]
-                  return (
-                    <button key={m.id} onClick={() => setPayerId(m.id)}
-                      style={{ flex: 1, padding: '10px 8px', background: payerId === m.id ? 'var(--title)' : 'var(--white)', border: '1.5px solid ' + (payerId === m.id ? 'var(--title)' : 'var(--border)'), borderRadius: 'var(--r-sm)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 34, height: 34, borderRadius: '50%', background: payerId === m.id ? 'rgba(255,255,255,.15)' : c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: payerId === m.id ? '#fff' : c.color }}>
-                        {m.name[0]}
-                      </div>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: payerId === m.id ? '#fff' : 'var(--body)' }}>{m.name.split(' ')[0]}</span>
-                    </button>
-                  )
-                })}
-              </div>
-              <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', overflow: 'hidden' }}>
-                {members.map((m, i) => {
-                  const c = colors[i % colors.length]
-                  const share = amountNum * m.defaultShare / 100
-                  return (
-                    <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
-                      <div style={{ width: 34, height: 34, borderRadius: '50%', background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: c.color, flexShrink: 0 }}>
-                        {m.name[0]}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontWeight: 500 }}>{m.name}</div>
-                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>{m.defaultShare}% del hogar</div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontFamily: 'var(--mono)', fontSize: 15, fontWeight: 500 }}>${share.toFixed(2)}</div>
-                        <div style={{ fontSize: 11, color: 'var(--muted)' }}>le corresponde</div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: montoOk ? 'rgba(201,242,106,.1)' : 'rgba(255,90,60,.06)', border: '1px solid ' + (montoOk ? 'rgba(201,242,106,.3)' : 'rgba(255,90,60,.15)'), borderRadius: 8 }}>
+              <span style={{ fontSize: 12, color: montoOk ? 'var(--green-dk)' : 'var(--red)' }}>Total ingresado</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 500, color: montoOk ? 'var(--green-dk)' : 'var(--red)' }}>
+                ${totalMonto.toFixed(2)} / ${amountNum.toFixed(2)} {montoOk ? '✓' : ''}
+              </span>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* TAB MONTO */}
-          {tab === 'monto' && (
-            <div>
-              <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.5, marginBottom: 12 }}>
-                Ingresa cuanto pago cada uno. El sistema calcula los porcentajes automaticamente.
-              </div>
-              <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', overflow: 'hidden', marginBottom: 10 }}>
-                {members.map((m, i) => {
-                  const c = colors[i % colors.length]
-                  const memberAmt = memberAmounts[m.id] ?? 0
-                  const pct = amountNum > 0 && memberAmt > 0 ? Math.round(memberAmt / amountNum * 100) : 0
-                  return (
-                    <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
-                      <div style={{ width: 34, height: 34, borderRadius: '50%', background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: c.color, flexShrink: 0 }}>
-                        {m.name[0]}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontWeight: 500 }}>{m.name.split(' ')[0]}</div>
-                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                          {pct > 0 ? pct + '% del total' : 'Cuanto pago?'}
-                        </div>
-                      </div>
-                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                        <span style={{ position: 'absolute', left: 10, fontSize: 14, color: 'var(--muted)', fontFamily: 'var(--mono)', pointerEvents: 'none' }}>$</span>
-                        <input
-                          type="number"
-                          value={memberAmt || ''}
-                          placeholder="0"
-                          onChange={e => setMemberAmounts(prev => ({ ...prev, [m.id]: Number(e.target.value) }))}
-                          style={{ width: 90, height: 38, background: 'var(--soft)', border: '1.5px solid var(--border)', borderRadius: 8, fontSize: 15, fontWeight: 600, textAlign: 'right', paddingRight: 10, paddingLeft: 26, color: 'var(--title)', outline: 'none', fontFamily: 'var(--mono)' }}
-                        />
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: montoOk ? 'rgba(201,242,106,.1)' : 'rgba(255,90,60,.06)', border: '1px solid ' + (montoOk ? 'rgba(201,242,106,.35)' : 'rgba(255,90,60,.2)'), borderRadius: 'var(--r-sm)' }}>
-                <span style={{ fontSize: 13, fontWeight: 600 }}>Total ingresado</span>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 15, fontWeight: 500, color: montoOk ? 'var(--green-dk)' : 'var(--red)' }}>
-                  ${totalMonto.toFixed(2)} {amountNum > 0 && ('/ $' + amountNum.toFixed(2))}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* TAB CUSTOM */}
-          {tab === 'custom' && (
-            <div>
-              <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.5, marginBottom: 12 }}>
-                Ajusta los porcentajes para este gasto. Deben sumar 100%.
-              </div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>Quien pago</div>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-                {members.map((m, i) => {
-                  const c = colors[i % colors.length]
-                  return (
-                    <button key={m.id} onClick={() => setPayerId(m.id)}
-                      style={{ flex: 1, padding: '10px 8px', background: payerId === m.id ? 'var(--title)' : 'var(--white)', border: '1.5px solid ' + (payerId === m.id ? 'var(--title)' : 'var(--border)'), borderRadius: 'var(--r-sm)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 34, height: 34, borderRadius: '50%', background: payerId === m.id ? 'rgba(255,255,255,.15)' : c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: payerId === m.id ? '#fff' : c.color }}>
-                        {m.name[0]}
-                      </div>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: payerId === m.id ? '#fff' : 'var(--body)' }}>{m.name.split(' ')[0]}</span>
-                    </button>
-                  )
-                })}
-              </div>
-              <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', overflow: 'hidden', marginBottom: 10 }}>
-                {members.map((m, i) => {
-                  const c = colors[i % colors.length]
-                  return (
-                    <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
-                      <div style={{ width: 34, height: 34, borderRadius: '50%', background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: c.color, flexShrink: 0 }}>
-                        {m.name[0]}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontWeight: 500 }}>{m.name}</div>
-                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                          ${((customShares[m.id] ?? 0) * amountNum / 100).toFixed(2)}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <input type="number" value={customShares[m.id] ?? 0} min={0} max={100}
-                          onChange={e => setCustomShares(prev => ({ ...prev, [m.id]: Number(e.target.value) }))}
-                          style={{ width: 52, height: 38, background: 'var(--soft)', border: '1.5px solid var(--border)', borderRadius: 8, fontSize: 16, fontWeight: 600, textAlign: 'center', color: 'var(--title)', outline: 'none', fontFamily: 'var(--mono)' }}
-                        />
-                        <span style={{ fontSize: 13, color: 'var(--muted)' }}>%</span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: customOk ? 'rgba(201,242,106,.1)' : 'rgba(255,90,60,.06)', border: '1px solid ' + (customOk ? 'rgba(201,242,106,.35)' : 'rgba(255,90,60,.2)'), borderRadius: 'var(--r-sm)' }}>
-                <span style={{ fontSize: 13, fontWeight: 600 }}>Total</span>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 16, fontWeight: 500, color: customOk ? 'var(--green-dk)' : 'var(--red)' }}>
-                  {totalCustom}% {customOk ? '✓' : '— faltan ' + (100 - totalCustom) + '%'}
-                </span>
-              </div>
-            </div>
-          )}
+        {/* NOTA */}
+        <div style={{ background: 'var(--soft)', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
+          {multiPago
+            ? 'Cada uno puso lo suyo ahora. Al liquidar al final del mes se ajusta segun el acuerdo del hogar.'
+            : payerName + ' pago $' + (amountNum > 0 ? amountNum.toFixed(0) : '0') + ' ahora. Al liquidar al final del mes se calcula quien debe que segun el acuerdo del hogar.'
+          }
         </div>
+
       </div>
 
       <div style={{ position: 'fixed', bottom: 72, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 430, padding: '16px 20px', background: 'linear-gradient(to top, var(--off) 70%, transparent)' }}>
-        <button onClick={handleSave}
-          disabled={isDisabled}
+        <button onClick={handleSave} disabled={isDisabled}
           style={{ width: '100%', height: 52, background: 'var(--title)', color: '#fff', border: 'none', borderRadius: 'var(--r-sm)', fontSize: 15, fontWeight: 700, cursor: 'pointer', opacity: isDisabled ? .4 : 1 }}>
           {saving ? 'Guardando...' : 'Guardar gasto'}
         </button>
