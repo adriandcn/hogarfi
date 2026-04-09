@@ -19,7 +19,7 @@ if (pathname === '/' || hideOn.some(p => pathname.startsWith(p))) return null
       {tabs.map(tab => {
         const active = pathname === tab.href || (tab.href !== '/dashboard' && pathname.startsWith(tab.href))
         return (
-          <a key={tab.href} href={tab.href} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: 10, textDecoration: 'none', gap: 3 }}>
+          <a key={tab.href} href={tab.href} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: 10, textDecoration: 'none', gap: 3, position: 'relative' }}>
             {tab.isCenter ? (
               <div style={{ width: 52, height: 52, background: 'var(--title)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, color: '#fff', marginTop: -20, border: '4px solid var(--off)' }}>
                 +

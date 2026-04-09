@@ -117,7 +117,7 @@ export default function NuevoGastoPage() {
     <div style={{ minHeight: '100vh', background: 'var(--off)' }}>
 
       {/* HEADER */}
-      <div style={{ background: 'var(--title)', padding: '52px 20px 20px' }}>
+      <div style={{ background: 'var(--title)', padding: '56px 20px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <button onClick={() => router.back()} style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,.1)', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             ←
