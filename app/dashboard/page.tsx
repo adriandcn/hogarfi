@@ -41,9 +41,7 @@ export default async function DashboardPage() {
 
   const balances = getBalances(expenses as any)
   const reimbursements = getSuggestedReimbursements(balances)
-  const myBalance = balances[myMemberId]
-  const myNet = myBalance?.total ?? 0
-
+  const myNet = balances[myMemberId]?.total ?? 0
   const totalSpent = monthExpenses.reduce((s, e) => s + e.amount, 0)
 
   const budgetByCategory: Record<string, number> = {}
@@ -57,35 +55,35 @@ export default async function DashboardPage() {
   const budgetPct = totalBudget > 0 ? Math.min(Math.round((totalSpent / totalBudget) * 100), 100) : 0
 
   const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-  const myName = (member.name ?? session.user.name ?? 'tú').split(' ')[0]
+  const myName = (member.name ?? session.user.name ?? 'tu').split(' ')[0]
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--off)', paddingBottom: 90 }}>
 
-      {/* HEADER */}
-  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-  <div>
-    <div style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500, marginBottom: 4 }}>
-      {household.name} · {monthNames[month]} {year}
-    </div>
-    <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.02em', lineHeight: 1.2 }}>
-      Hola, {myName} 👋
-    </div>
-  </div>
-  <div style={{ display: 'flex', gap: 8 }}>
-    <a href="/invitar" style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, textDecoration: 'none' }}>
-      👥
-    </a>
-    <a href="/configuracion" style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--soft)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, textDecoration: 'none' }}>
-      ⚙️
-    </a>
-  </div>
-</div>
+      <div style={{ padding: '52px 20px 20px' }}>
 
-        {/* BALANCE CARD */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+          <div>
+            <div style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500, marginBottom: 4 }}>
+              {household.name} · {monthNames[month]} {year}
+            </div>
+            <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.02em', lineHeight: 1.2 }}>
+              Hola, {myName}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <a href="/invitar" style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, textDecoration: 'none' }}>
+              👥
+            </a>
+            <a href="/configuracion" style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--soft)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, textDecoration: 'none' }}>
+              ⚙️
+            </a>
+          </div>
+        </div>
+
         <div style={{ background: 'var(--title)', borderRadius: 20, padding: '20px', marginBottom: 12 }}>
           {totalBudget > 0 ? (
-            <>
+            <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.4)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>
                 Presupuesto restante
               </div>
@@ -97,33 +95,31 @@ export default async function DashboardPage() {
                   de ${totalBudget.toFixed(0)} · {budgetPct}% usado
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', background: budgetPct > 90 ? 'rgba(255,90,60,.2)' : 'rgba(201,242,106,.15)', color: budgetPct > 90 ? '#ff8a70' : 'var(--green)', borderRadius: 999 }}>
-                  {budgetPct > 90 ? 'Cerca del límite' : 'Al día'}
+                  {budgetPct > 90 ? 'Cerca del limite' : 'Al dia'}
                 </div>
               </div>
               <div style={{ height: 4, background: 'rgba(255,255,255,.08)', borderRadius: 999, overflow: 'hidden' }}>
-                <div style={{ height: '100%', background: budgetPct > 90 ? 'var(--red)' : 'var(--green)', borderRadius: 999, width: budgetPct + '%', transition: 'width .6s' }} />
+                <div style={{ height: '100%', background: budgetPct > 90 ? 'var(--red)' : 'var(--green)', borderRadius: 999, width: budgetPct + '%' }} />
               </div>
-            </>
+            </div>
           ) : (
-            <>
+            <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.4)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>
                 Gastado este mes
               </div>
               <div style={{ fontFamily: 'var(--mono)', fontSize: 44, fontWeight: 500, color: '#fff', letterSpacing: '-.02em', lineHeight: 1, marginBottom: 12 }}>
                 ${totalSpent.toFixed(0)}
               </div>
-              <a href="/presupuesto" style={{ fontSize: 13, color: 'rgba(255,255,255,.45)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-                Configurar presupuesto →
+              <a href="/presupuesto" style={{ fontSize: 13, color: 'rgba(255,255,255,.45)', textDecoration: 'none' }}>
+                Configurar presupuesto
               </a>
-            </>
+            </div>
           )}
         </div>
 
-        {/* MEMBER CHIPS */}
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
           {members.map(m => {
-            const bal = balances[m.id]
-            const total = bal?.total ?? 0
+            const total = balances[m.id]?.total ?? 0
             const name = (m.name ?? m.user?.name ?? '?').split(' ')[0]
             return (
               <div key={m.id} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6, background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 999, padding: '6px 12px 6px 8px' }}>
@@ -138,9 +134,9 @@ export default async function DashboardPage() {
             )
           })}
         </div>
+
       </div>
 
-      
       {myNet !== 0 && (
         <div style={{ margin: '0 20px 16px' }}>
           <div style={{ background: myNet > 0 ? 'rgba(201,242,106,.1)' : 'rgba(255,90,60,.05)', border: '1px solid ' + (myNet > 0 ? 'rgba(201,242,106,.3)' : 'rgba(255,90,60,.2)'), borderRadius: 14, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -168,7 +164,6 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* STATS */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, margin: '0 20px 16px' }}>
         <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px' }}>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Gastado</div>
@@ -180,11 +175,10 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* ULTIMOS GASTOS */}
       <div style={{ padding: '0 20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div style={{ fontSize: 15, fontWeight: 700 }}>Ultimos gastos</div>
-          <a href="/gastos" style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500, textDecoration: 'none' }}>Ver todos →</a>
+          <a href="/gastos" style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500, textDecoration: 'none' }}>Ver todos</a>
         </div>
 
         {expenses.length === 0 ? (
@@ -204,7 +198,6 @@ export default async function DashboardPage() {
               const mySplit = exp.splits.find(s => s.memberId === myMemberId)
               const iOwe = exp.paidById !== myMemberId && mySplit && mySplit.amount > 0
               const iAmOwed = exp.paidById === myMemberId && mySplit && exp.amount > mySplit.amount
-
               return (
                 <div key={exp.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
                   <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
