@@ -1,14 +1,21 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { headers } from 'next/headers'
+import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const cookieStore = await cookies()
+  const activeHouseholdId = cookieStore.get('active_household')?.value
+
   const member = await prisma.householdMember.findFirst({
-    where: { userId: session.user.id },
+    where: {
+      userId: session.user.id,
+      ...(activeHouseholdId ? { householdId: activeHouseholdId } : {}),
+    },
     include: {
       household: {
         include: {
