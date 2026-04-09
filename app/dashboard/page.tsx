@@ -1,21 +1,22 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { headers } from 'next/headers'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getBalances, getSuggestedReimbursements } from '@/lib/balances'
-import { cookies } from 'next/headers'
+
 export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) redirect('/login')
 
- const cookieStore = await cookies()
-const activeHouseholdId = cookieStore.get('active_household')?.value
+  const cookieStore = await cookies()
+  const activeHouseholdId = cookieStore.get('active_household')?.value
 
-const member = await prisma.householdMember.findFirst({
-  where: {
-    userId: session.user.id,
-    ...(activeHouseholdId ? { householdId: activeHouseholdId } : {}),
-  },
+  const member = await prisma.householdMember.findFirst({
+    where: {
+      userId: session.user.id,
+      ...(activeHouseholdId ? { householdId: activeHouseholdId } : {}),
+    },
     include: {
       household: {
         include: {
@@ -40,6 +41,7 @@ const member = await prisma.householdMember.findFirst({
   const now = new Date()
   const month = now.getMonth()
   const year = now.getFullYear()
+
   const monthExpenses = expenses.filter(e => {
     const d = new Date(e.createdAt)
     return d.getMonth() === month && d.getFullYear() === year
@@ -50,13 +52,8 @@ const member = await prisma.householdMember.findFirst({
   const myNet = balances[myMemberId]?.total ?? 0
   const totalSpent = monthExpenses.reduce((s, e) => s + e.amount, 0)
 
-  const budgetByCategory: Record<string, number> = {}
-  for (const b of household.budgets) {
-    if (b.month === month + 1 && b.year === year) {
-      budgetByCategory[b.categoryId] = b.amount
-    }
-  }
-  const totalBudget = Object.values(budgetByCategory).reduce((s, v) => s + v, 0)
+  const monthBudgets = household.budgets.filter(b => b.month === month + 1 && b.year === year)
+  const totalBudget = monthBudgets.reduce((s, b) => s + b.amount, 0)
   const budgetRemaining = totalBudget - totalSpent
   const budgetPct = totalBudget > 0 ? Math.min(Math.round((totalSpent / totalBudget) * 100), 100) : 0
 
@@ -68,6 +65,7 @@ const member = await prisma.householdMember.findFirst({
 
       <div style={{ padding: '52px 20px 20px' }}>
 
+        {/* HEADER */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div>
             <div style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500, marginBottom: 4 }}>
@@ -87,6 +85,7 @@ const member = await prisma.householdMember.findFirst({
           </div>
         </div>
 
+        {/* BALANCE CARD */}
         <div style={{ background: 'var(--title)', borderRadius: 20, padding: '20px', marginBottom: 12 }}>
           {totalBudget > 0 ? (
             <div>
@@ -108,29 +107,30 @@ const member = await prisma.householdMember.findFirst({
                 <div style={{ height: '100%', background: budgetPct > 90 ? 'var(--red)' : 'var(--green)', borderRadius: 999, width: budgetPct + '%' }} />
               </div>
             </div>
-         ) : (
-  <div>
-    <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.4)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-      Gastado este mes
-    </div>
-    <div style={{ fontFamily: 'var(--mono)', fontSize: 44, fontWeight: 500, color: '#fff', letterSpacing: '-.02em', lineHeight: 1, marginBottom: 16 }}>
-      ${totalSpent.toFixed(0)}
-    </div>
-    <a href="/presupuesto?setup=true" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(201,242,106,.12)', border: '1px solid rgba(201,242,106,.25)', borderRadius: 12, padding: '12px 14px', textDecoration: 'none' }}>
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--green)', marginBottom: 2 }}>
-          Configura tu presupuesto
-        </div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', lineHeight: 1.4 }}>
-          Define metas mensuales y recibe alertas cuando te acerques al limite
-        </div>
-      </div>
-      <div style={{ fontSize: 20, marginLeft: 12, flexShrink: 0 }}>→</div>
-    </a>
-  </div>
-)}
+          ) : (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.4)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+                Gastado este mes
+              </div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 44, fontWeight: 500, color: '#fff', letterSpacing: '-.02em', lineHeight: 1, marginBottom: 16 }}>
+                ${totalSpent.toFixed(0)}
+              </div>
+              <a href="/presupuesto?setup=true" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(201,242,106,.12)', border: '1px solid rgba(201,242,106,.25)', borderRadius: 12, padding: '12px 14px', textDecoration: 'none' }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--green)', marginBottom: 2 }}>
+                    Configura tu presupuesto
+                  </div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', lineHeight: 1.4 }}>
+                    Define metas mensuales y recibe alertas
+                  </div>
+                </div>
+                <div style={{ fontSize: 18, marginLeft: 12, color: 'var(--green)', flexShrink: 0 }}>→</div>
+              </a>
+            </div>
+          )}
         </div>
 
+        {/* MEMBER CHIPS */}
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
           {members.map(m => {
             const total = balances[m.id]?.total ?? 0
@@ -151,6 +151,7 @@ const member = await prisma.householdMember.findFirst({
 
       </div>
 
+      {/* MY BALANCE */}
       {myNet !== 0 && (
         <div style={{ margin: '0 20px 16px' }}>
           <div style={{ background: myNet > 0 ? 'rgba(201,242,106,.1)' : 'rgba(255,90,60,.05)', border: '1px solid ' + (myNet > 0 ? 'rgba(201,242,106,.3)' : 'rgba(255,90,60,.2)'), borderRadius: 14, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -178,6 +179,7 @@ const member = await prisma.householdMember.findFirst({
         </div>
       )}
 
+      {/* STATS */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, margin: '0 20px 16px' }}>
         <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px' }}>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Gastado</div>
@@ -189,6 +191,67 @@ const member = await prisma.householdMember.findFirst({
         </div>
       </div>
 
+      {/* PRESUPUESTO PREVIEW */}
+      <div style={{ padding: '0 20px 16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>Presupuesto</div>
+          <a href="/presupuesto" style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500, textDecoration: 'none' }}>
+            Editar
+          </a>
+        </div>
+
+        {monthBudgets.length > 0 ? (
+          <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+            {monthBudgets.slice(0, 3).map((b, i) => {
+              const spent = monthExpenses
+                .filter(e => e.categoryId === b.categoryId)
+                .reduce((s, e) => s + e.amount, 0)
+              const pctB = b.amount > 0 ? Math.min(Math.round((spent / b.amount) * 100), 100) : 0
+              const over = spent > b.amount
+              return (
+                <div key={b.id} style={{ padding: '12px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                    <span style={{ fontSize: 18 }}>{b.category.icon}</span>
+                    <div style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{b.category.name}</div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 500, color: over ? 'var(--red)' : 'var(--title)' }}>
+                        ${spent.toFixed(0)}
+                      </span>
+                      <span style={{ fontSize: 12, color: 'var(--muted)' }}> / ${b.amount.toFixed(0)}</span>
+                    </div>
+                  </div>
+                  <div style={{ height: 4, background: 'var(--soft)', borderRadius: 999, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: 999, background: over ? 'var(--red)' : (b.category.color || 'var(--green-dk)'), width: pctB + '%' }} />
+                  </div>
+                </div>
+              )
+            })}
+            {monthBudgets.length > 3 && (
+              <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
+                <a href="/presupuesto" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none', fontWeight: 500 }}>
+                  Ver todas las categorias →
+                </a>
+              </div>
+            )}
+          </div>
+        ) : (
+          <a href="/presupuesto?setup=true" style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'var(--white)', border: '1.5px dashed var(--border)', borderRadius: 16, padding: '16px', textDecoration: 'none' }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(201,242,106,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
+              📊
+            </div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--title)', marginBottom: 2 }}>
+                Configura tu presupuesto
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.4 }}>
+                Define metas y recibe alertas cuando te acerques al limite
+              </div>
+            </div>
+          </a>
+        )}
+      </div>
+
+      {/* ULTIMOS GASTOS */}
       <div style={{ padding: '0 20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div style={{ fontSize: 15, fontWeight: 700 }}>Ultimos gastos</div>

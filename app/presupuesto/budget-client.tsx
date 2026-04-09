@@ -25,7 +25,13 @@ const DEFAULT_CATEGORIES = [
   { name: 'Otro', icon: '📦', color: '#9b9690' },
 ]
 
-export default function BudgetClient({ isSetup = false, activeHouseholdId }: { isSetup?: boolean; activeHouseholdId?: string }) {
+export default function BudgetClient({
+  isSetup = false,
+  activeHouseholdId,
+}: {
+  isSetup?: boolean
+  activeHouseholdId?: string
+}) {
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [loading, setLoading] = useState(true)
   const [month, setMonth] = useState(new Date().getMonth() + 1)
@@ -41,17 +47,17 @@ export default function BudgetClient({ isSetup = false, activeHouseholdId }: { i
     loadBudgets()
   }, [month, year])
 
- async function loadBudgets() {
-  setLoading(true)
-  try {
-    const params = activeHouseholdId ? '?householdId=' + activeHouseholdId : ''
-    const res = await fetch('/api/budget' + params)
-    const data = await res.json()
-    setBudgets(data.budgets ?? [])
-  } finally {
-    setLoading(false)
+  async function loadBudgets() {
+    setLoading(true)
+    try {
+      const params = activeHouseholdId ? '?householdId=' + activeHouseholdId : ''
+      const res = await fetch('/api/budget' + params)
+      const data = await res.json()
+      setBudgets(data.budgets ?? [])
+    } finally {
+      setLoading(false)
+    }
   }
-}
 
   async function addBudget() {
     if (!newAmount) return
@@ -80,20 +86,39 @@ export default function BudgetClient({ isSetup = false, activeHouseholdId }: { i
     }
   }
 
+  async function updateBudget(b: Budget, newAmount: number) {
+    if (newAmount === b.amount || isNaN(newAmount)) return
+    await fetch('/api/budget', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        categoryName: b.category.name,
+        icon: b.category.icon,
+        color: b.category.color,
+        amount: newAmount,
+        month,
+        year,
+      }),
+    })
+    loadBudgets()
+  }
+
   const totalBudget = budgets.reduce((s, b) => s + b.amount, 0)
   const totalSpent = budgets.reduce((s, b) => s + b.spent, 0)
   const pct = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0
 
+  const availableCats = DEFAULT_CATEGORIES.filter(
+    c => !budgets.find(b => b.category.name === c.name)
+  )
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--off)', paddingBottom: 100 }}>
 
-      {/* HEADER */}
       <div style={{ background: 'var(--title)', padding: '52px 20px 20px' }}>
         <div style={{ fontSize: 24, fontWeight: 800, color: '#fff', letterSpacing: '-.02em', marginBottom: 16 }}>
           Presupuesto
         </div>
 
-        {/* Month nav */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <button
             onClick={() => { if (month === 1) { setMonth(12); setYear(y => y - 1) } else setMonth(m => m - 1) }}
@@ -110,7 +135,6 @@ export default function BudgetClient({ isSetup = false, activeHouseholdId }: { i
           </button>
         </div>
 
-        {/* Total progress */}
         {totalBudget > 0 && (
           <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 14, padding: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -137,29 +161,26 @@ export default function BudgetClient({ isSetup = false, activeHouseholdId }: { i
         )}
       </div>
 
-      {/* SETUP BANNER */}
       {isSetup && (
         <div style={{ padding: '16px 20px 0' }}>
-          <div style={{ background: 'rgba(201,242,106,.1)', border: '1px solid rgba(201,242,106,.3)', borderRadius: 14, padding: '14px 16px', marginBottom: 12 }}>
+          <div style={{ background: 'rgba(201,242,106,.1)', border: '1px solid rgba(201,242,106,.3)', borderRadius: 14, padding: '14px 16px', marginBottom: 10 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--green-dk)', marginBottom: 4 }}>
               Configura tu presupuesto mensual
             </div>
             <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.5 }}>
-              Define cuanto quieren gastar en cada categoria. Puedes configurarlo ahora o hacerlo despues desde la app.
+              Define cuanto quieren gastar en cada categoria. Puedes configurarlo ahora o hacerlo despues.
             </div>
           </div>
-          
-            <button
-  onClick={() => window.location.href = '/dashboard'}
-  style={{ width: '100%', display: 'block', textAlign: 'center', padding: '13px', fontSize: 14, fontWeight: 600, color: 'var(--muted)', border: '1.5px solid var(--border)', borderRadius: 'var(--r-sm)', background: 'transparent', cursor: 'pointer', marginBottom: 4 }}>
-  Saltar por ahora
-</button>
+          <button
+            onClick={() => window.location.href = '/dashboard'}
+            style={{ width: '100%', padding: '13px', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 'var(--r-sm)', fontSize: 14, fontWeight: 600, color: 'var(--muted)', cursor: 'pointer', marginBottom: 4 }}>
+            Saltar por ahora
+          </button>
         </div>
       )}
 
       <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-        {/* LISTA */}
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px', color: 'var(--muted)', fontSize: 14 }}>Cargando...</div>
         ) : budgets.length === 0 && !showAdd ? (
@@ -170,7 +191,7 @@ export default function BudgetClient({ isSetup = false, activeHouseholdId }: { i
               Define cuanto quieres gastar en cada categoria del hogar
             </div>
           </div>
-        ) : (
+        ) : budgets.length > 0 && (
           <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
             {budgets.map((b, i) => {
               const pctB = b.amount > 0 ? Math.min(Math.round((b.spent / b.amount) * 100), 100) : 0
@@ -183,17 +204,18 @@ export default function BudgetClient({ isSetup = false, activeHouseholdId }: { i
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 1 }}>{b.category.name}</div>
-                      <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                        ${b.spent.toFixed(0)} de ${b.amount.toFixed(0)}
+                      <div style={{ fontSize: 12, color: over ? 'var(--red)' : 'var(--muted)' }}>
+                        ${b.spent.toFixed(0)} gastado {over ? '— excedido por $' + (b.spent - b.amount).toFixed(0) : 'de $' + b.amount.toFixed(0)}
                       </div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontFamily: 'var(--mono)', fontSize: 15, fontWeight: 500, color: over ? 'var(--red)' : 'var(--title)' }}>
-                        {over ? '+$' + (b.spent - b.amount).toFixed(0) : '$' + (b.amount - b.spent).toFixed(0)}
-                      </div>
-                      <div style={{ fontSize: 11, color: over ? 'var(--red)' : 'var(--muted)' }}>
-                        {over ? 'excedido' : 'restante'}
-                      </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ fontSize: 13, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>$</span>
+                      <input
+                        type="number"
+                        defaultValue={b.amount}
+                        onBlur={e => updateBudget(b, parseFloat(e.target.value))}
+                        style={{ width: 72, height: 36, background: 'var(--soft)', border: '1.5px solid var(--border)', borderRadius: 8, fontSize: 15, fontWeight: 600, textAlign: 'right', paddingRight: 8, color: over ? 'var(--red)' : 'var(--title)', outline: 'none', fontFamily: 'var(--mono)' }}
+                      />
                     </div>
                   </div>
                   <div style={{ height: 5, background: 'var(--soft)', borderRadius: 999, overflow: 'hidden' }}>
@@ -205,7 +227,6 @@ export default function BudgetClient({ isSetup = false, activeHouseholdId }: { i
           </div>
         )}
 
-        {/* ADD FORM */}
         {showAdd ? (
           <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, padding: '18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ fontSize: 15, fontWeight: 700 }}>Nueva categoria</div>
@@ -213,7 +234,7 @@ export default function BudgetClient({ isSetup = false, activeHouseholdId }: { i
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>Categoria</div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {DEFAULT_CATEGORIES.map(c => (
+                {(availableCats.length > 0 ? availableCats : DEFAULT_CATEGORIES).map(c => (
                   <button key={c.name} onClick={() => setNewCat(c.name)}
                     style={{ padding: '7px 12px', background: newCat === c.name ? 'var(--title)' : 'var(--soft)', border: 'none', borderRadius: 999, fontSize: 12, fontWeight: 500, cursor: 'pointer', color: newCat === c.name ? '#fff' : 'var(--body)', display: 'flex', alignItems: 'center', gap: 4 }}>
                     {c.icon} {c.name}
@@ -227,9 +248,7 @@ export default function BudgetClient({ isSetup = false, activeHouseholdId }: { i
               <div style={{ position: 'relative' }}>
                 <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--mono)', fontSize: 20, color: 'var(--muted)' }}>$</span>
                 <input
-                  type="number"
-                  placeholder="0"
-                  value={newAmount}
+                  type="number" placeholder="0" value={newAmount}
                   onChange={e => setNewAmount(e.target.value)}
                   style={{ width: '100%', height: 56, background: 'var(--soft)', border: '1.5px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '0 16px 0 36px', fontFamily: 'var(--mono)', fontSize: 24, fontWeight: 500, color: 'var(--title)', outline: 'none' }}
                 />
