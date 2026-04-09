@@ -1,8 +1,8 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { headers } from 'next/headers'
-import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { getBalances, getSuggestedReimbursements } from '@/lib/balances'
 
 export default async function GastosPage() {
@@ -10,13 +10,13 @@ export default async function GastosPage() {
   if (!session) redirect('/login')
 
   const cookieStore = await cookies()
-const activeHouseholdId = cookieStore.get('active_household')?.value
+  const activeHouseholdId = cookieStore.get('active_household')?.value
 
-const member = await prisma.householdMember.findFirst({
-  where: {
-    userId: session.user.id,
-    ...(activeHouseholdId ? { householdId: activeHouseholdId } : {}),
-  },
+  const member = await prisma.householdMember.findFirst({
+    where: {
+      userId: session.user.id,
+      ...(activeHouseholdId ? { householdId: activeHouseholdId } : {}),
+    },
     include: {
       household: {
         include: {
@@ -113,46 +113,38 @@ const member = await prisma.householdMember.findFirst({
             <div style={{ fontSize: 13, color: 'var(--muted)' }}>Agrega tu primer gasto del hogar</div>
           </div>
         ) : (
-          <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
-            {expenses.map((exp, i) => {
-              const payer = members.find(m => m.id === exp.paidById)
-              const payerName = (payer?.name ?? payer?.user?.name ?? '?').split(' ')[0]
-              return (
-                <div key={exp.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
-                    {exp.category?.icon ?? '💳'}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {exp.description}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', padding: '2px 0' }}>
+              Toca un gasto para editarlo
+            </div>
+            <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+              {expenses.map((exp, i) => {
+                const payer = members.find(m => m.id === exp.paidById)
+                const payerName = (payer?.name ?? payer?.user?.name ?? '?').split(' ')[0]
+                return (
+                  <a key={exp.id} href={'/gastos/' + exp.id + '/editar'}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none', textDecoration: 'none', color: 'inherit' }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+                      {exp.category?.icon ?? '💳'}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                      <span>{payerName} pago</span>
-                      <span>·</span>
-                      <span style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        {exp.splits.map(s => {
-                          const sm = members.find(m => m.id === s.memberId)
-                          const sName = (sm?.name ?? sm?.user?.name ?? '?').split(' ')[0]
-                          return (
-                            <span key={s.memberId} style={{ background: 'var(--soft)', borderRadius: 4, padding: '1px 5px', fontSize: 11, fontWeight: 600 }}>
-                              {sName} {s.percentage}%
-                            </span>
-                          )
-                        })}
-                      </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {exp.description}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                        {payerName} pago · {new Date(exp.createdAt).toLocaleDateString('es', { day: 'numeric', month: 'short' })}
+                      </div>
                     </div>
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontFamily: 'var(--mono)', fontSize: 15, fontWeight: 500 }}>
-                      ${exp.amount.toFixed(2)}
+                    <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 15, fontWeight: 500 }}>
+                        ${exp.amount.toFixed(2)}
+                      </div>
+                      <div style={{ fontSize: 16 }}>✏️</div>
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                      {new Date(exp.createdAt).toLocaleDateString('es', { day: 'numeric', month: 'short' })}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+                  </a>
+                )
+              })}
+            </div>
           </div>
         )}
       </div>
