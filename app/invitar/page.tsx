@@ -1,11 +1,15 @@
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import CopyButton from './copy-button'
 
-async function getInvitations() {
+async function getInvitations(activeHouseholdId?: string) {
   const baseUrl = process.env.BETTER_AUTH_URL ?? 'http://localhost:3000'
-  const res = await fetch(`${baseUrl}/api/household/invite`, {
+  const url = activeHouseholdId
+    ? `${baseUrl}/api/household/invite?householdId=${activeHouseholdId}`
+    : `${baseUrl}/api/household/invite`
+  const res = await fetch(url, {
     headers: { cookie: (await headers()).get('cookie') ?? '' },
     cache: 'no-store',
   })
@@ -16,7 +20,10 @@ export default async function InvitarPage() {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) redirect('/login')
 
-  const data = await getInvitations()
+  const cookieStore = await cookies()
+  const activeHouseholdId = cookieStore.get('active_household')?.value
+
+  const data = await getInvitations(activeHouseholdId)
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--off)', paddingBottom: 100 }}>
@@ -45,7 +52,12 @@ export default async function InvitarPage() {
           <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, padding: '40px 20px', textAlign: 'center' }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>✅</div>
             <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>Todos unidos</div>
-            <div style={{ fontSize: 13, color: 'var(--muted)' }}>Todos los miembros ya tienen su link</div>
+            <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20 }}>
+              Todos los miembros ya tienen cuenta activa
+            </div>
+            <a href="/configuracion" style={{ display: 'inline-block', background: 'var(--title)', color: '#fff', borderRadius: 999, padding: '10px 20px', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+              Agregar miembro
+            </a>
           </div>
         )}
 
@@ -66,6 +78,11 @@ export default async function InvitarPage() {
             <CopyButton link={inv.link} name={inv.memberName} />
           </div>
         ))}
+
+        <a href="/configuracion" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 48, background: 'var(--white)', border: '1.5px solid var(--border)', borderRadius: 14, fontSize: 14, fontWeight: 600, color: 'var(--body)', textDecoration: 'none' }}>
+          + Agregar miembro nuevo
+        </a>
+
       </div>
     </div>
   )
