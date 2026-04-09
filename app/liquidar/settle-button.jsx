@@ -7,7 +7,7 @@ export default function SettleButton({ fromMemberId, toMemberId, amount, househo
   const router = useRouter()
 
   async function handleSettle() {
-    if (!confirm('Marcar como pagado?')) return
+    if (!confirm('Confirmar pago de $' + amount.toFixed(2) + '?')) return
     setLoading(true)
     try {
       const res = await fetch('/api/liquidar', {
@@ -30,8 +30,8 @@ export default function SettleButton({ fromMemberId, toMemberId, amount, househo
     <button
       onClick={handleSettle}
       disabled={loading}
-      style={{ width: '100%', background: loading ? '#555' : 'var(--ink)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-syne)', opacity: loading ? 0.6 : 1 }}>
+      style={{ width: '100%', height: 44, background: loading ? 'var(--soft)' : 'var(--title)', color: loading ? 'var(--muted)' : '#fff', border: 'none', borderRadius: 'var(--r-sm)', fontSize: 14, fontWeight: 700, cursor: loading ? 'default' : 'pointer', fontFamily: 'var(--font)', transition: 'all .2s' }}>
       {loading ? 'Procesando...' : label}
     </button>
   )
-} 
+}

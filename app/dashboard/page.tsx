@@ -108,19 +108,27 @@ const member = await prisma.householdMember.findFirst({
                 <div style={{ height: '100%', background: budgetPct > 90 ? 'var(--red)' : 'var(--green)', borderRadius: 999, width: budgetPct + '%' }} />
               </div>
             </div>
-          ) : (
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.4)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-                Gastado este mes
-              </div>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 44, fontWeight: 500, color: '#fff', letterSpacing: '-.02em', lineHeight: 1, marginBottom: 12 }}>
-                ${totalSpent.toFixed(0)}
-              </div>
-              <a href="/presupuesto" style={{ fontSize: 13, color: 'rgba(255,255,255,.45)', textDecoration: 'none' }}>
-                Configurar presupuesto
-              </a>
-            </div>
-          )}
+         ) : (
+  <div>
+    <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.4)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+      Gastado este mes
+    </div>
+    <div style={{ fontFamily: 'var(--mono)', fontSize: 44, fontWeight: 500, color: '#fff', letterSpacing: '-.02em', lineHeight: 1, marginBottom: 16 }}>
+      ${totalSpent.toFixed(0)}
+    </div>
+    <a href="/presupuesto?setup=true" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(201,242,106,.12)', border: '1px solid rgba(201,242,106,.25)', borderRadius: 12, padding: '12px 14px', textDecoration: 'none' }}>
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--green)', marginBottom: 2 }}>
+          Configura tu presupuesto
+        </div>
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', lineHeight: 1.4 }}>
+          Define metas mensuales y recibe alertas cuando te acerques al limite
+        </div>
+      </div>
+      <div style={{ fontSize: 20, marginLeft: 12, flexShrink: 0 }}>→</div>
+    </a>
+  </div>
+)}
         </div>
 
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
