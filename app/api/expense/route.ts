@@ -1,6 +1,5 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { calculateSplitsFromShares } from '@/lib/balances'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 
@@ -8,13 +7,12 @@ export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { householdId, paidById, description, amount, categoryName, icon, useDefaultShares, customShares } = await req.json()
+  const { householdId, paidById, description, amount, categoryName, icon, splits } = await req.json()
 
   if (!householdId || !paidById || !description || !amount) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
 
-  // Verificar que el usuario pertenece al hogar
   const member = await prisma.householdMember.findFirst({
     where: { householdId, userId: session.user.id },
   })
@@ -33,17 +31,6 @@ export async function POST(req: Request) {
     }
   }
 
-  // Obtener miembros para calcular splits
-  const members = await prisma.householdMember.findMany({
-    where: { householdId },
-  })
-
-  const sharesInput = useDefaultShares
-    ? members.map(m => ({ id: m.id, defaultShare: m.defaultShare }))
-    : customShares.map((s: any) => ({ id: s.memberId, defaultShare: s.percentage }))
-
-  const splits = calculateSplitsFromShares(amount, sharesInput)
-
   const expense = await prisma.expense.create({
     data: {
       householdId,
@@ -51,10 +38,10 @@ export async function POST(req: Request) {
       description,
       amount,
       categoryId: category?.id,
-      useDefaultShares,
+      useDefaultShares: true,
       splits: {
         createMany: {
-          data: splits.map(s => ({
+          data: splits.map((s: any) => ({
             memberId: s.memberId,
             percentage: s.percentage,
             amount: s.amount,
@@ -69,4 +56,4 @@ export async function POST(req: Request) {
   })
 
   return NextResponse.json(expense)
-} 
+}
