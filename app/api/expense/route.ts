@@ -7,8 +7,8 @@ export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { householdId, paidById, description, amount, categoryName, icon, splits } = await req.json()
-
+  
+const { householdId, paidById, description, amount, categoryName, icon, splits, date } = await req.json()
   if (!householdId || !paidById || !description || !amount) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
@@ -39,6 +39,7 @@ export async function POST(req: Request) {
       amount,
       categoryId: category?.id,
       useDefaultShares: true,
+       createdAt: date ? new Date(date) : undefined,
       splits: {
         createMany: {
           data: splits.map((s: any) => ({

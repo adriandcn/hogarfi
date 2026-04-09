@@ -18,6 +18,7 @@ export default function NuevoGastoPage() {
   const [scanning, setScanning] = useState(false)
   const [receipt, setReceipt] = useState<string | null>(null)
   const [loadingMembers, setLoadingMembers] = useState(true)
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
 
   const cats = [
     { name: 'Comida', icon: '🛒' },
@@ -127,6 +128,7 @@ export default function NuevoGastoPage() {
         categoryName: category,
         icon: catIcon,
         splits,
+        date,
       }),
     })
 
@@ -192,6 +194,16 @@ export default function NuevoGastoPage() {
             style={{ width: '100%', height: 50, background: 'var(--white)', border: '1.5px solid ' + (description ? 'var(--title)' : 'var(--border)'), borderRadius: 'var(--r-sm)', padding: '0 16px', fontSize: 15, color: 'var(--title)', outline: 'none' }}
           />
         </div>
+        {/* FECHA */}
+<div>
+  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>Fecha</div>
+  <input
+    type="date"
+    value={date}
+    onChange={e => setDate(e.target.value)}
+    style={{ width: '100%', height: 50, background: 'var(--white)', border: '1.5px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '0 16px', fontSize: 15, color: 'var(--title)', outline: 'none' }}
+  />
+</div>
 
         {/* CATEGORIA */}
         <div>
