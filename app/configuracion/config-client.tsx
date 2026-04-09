@@ -9,7 +9,13 @@ type Member = {
   isMe: boolean
   hasAccount: boolean
 }
-type Household = { id: string; name: string; isActive: boolean; memberCount: number }
+
+type Household = {
+  id: string
+  name: string
+  isActive: boolean
+  memberCount: number
+}
 
 export default function ConfigClient({
   householdId,
@@ -23,18 +29,6 @@ export default function ConfigClient({
   members: Member[]
   isAdmin: boolean
   myHouseholds: Household[]
-})
-
-export default function ConfigClient({
-  householdId,
-  householdName,
-  members: initialMembers,
-  isAdmin,
-}: {
-  householdId: string
-  householdName: string
-  members: Member[]
-  isAdmin: boolean
 }) {
   const router = useRouter()
   const [members, setMembers] = useState<Member[]>(initialMembers)
@@ -48,7 +42,6 @@ export default function ConfigClient({
   const [newMemberShare, setNewMemberShare] = useState(0)
   const [addingMember, setAddingMember] = useState(false)
 
-  const allShares = { ...shares, ...(newMemberName ? { new: newMemberShare } : {}) }
   const total = Object.values(shares).reduce((s, v) => s + v, 0) + (newMemberName ? newMemberShare : 0)
   const sharesOk = Math.abs(total - 100) < 0.5
 
@@ -120,7 +113,6 @@ export default function ConfigClient({
 
       <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-        {/* NOMBRE */}
         <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, padding: '18px' }}>
           <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Nombre del hogar</div>
           <input
@@ -130,7 +122,6 @@ export default function ConfigClient({
           />
         </div>
 
-        {/* MIEMBROS Y PORCENTAJES */}
         <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
           <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
             <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>Miembros del hogar</div>
@@ -169,7 +160,6 @@ export default function ConfigClient({
             )
           })}
 
-          {/* AGREGAR MIEMBRO */}
           {isAdmin && (
             <div style={{ padding: '14px 18px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'var(--soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: 'var(--muted)', flexShrink: 0, fontWeight: 700 }}>
@@ -195,7 +185,7 @@ export default function ConfigClient({
                 onClick={addMember}
                 disabled={!newMemberName || newMemberShare <= 0 || addingMember}
                 style={{ height: 38, padding: '0 14px', background: newMemberName && newMemberShare > 0 ? 'var(--title)' : 'var(--soft)', color: newMemberName && newMemberShare > 0 ? '#fff' : 'var(--muted)', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
-                {addingMember ? '...' : 'Add'}
+                {addingMember ? '...' : 'Agregar'}
               </button>
             </div>
           )}
@@ -208,46 +198,44 @@ export default function ConfigClient({
           </div>
         </div>
 
-        {/* MIS HOGARES */}
-<div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
-  <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
-    <div style={{ fontSize: 13, fontWeight: 700 }}>Mis hogares</div>
-  </div>
-  {myHouseholds.map((h, i) => (
-    <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 18px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 14, fontWeight: 600 }}>{h.name}</div>
-        <div style={{ fontSize: 12, color: 'var(--muted)' }}>{h.memberCount} miembros</div>
-      </div>
-      {h.isActive ? (
-        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--green-dk)', background: 'rgba(201,242,106,.15)', padding: '4px 10px', borderRadius: 999 }}>
-          Activo
+        <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>Mis hogares</div>
+          </div>
+          {myHouseholds.map((h, i) => (
+            <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 18px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{h.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)' }}>{h.memberCount} miembros</div>
+              </div>
+              {h.isActive ? (
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--green-dk)', background: 'rgba(201,242,106,.15)', padding: '4px 10px', borderRadius: 999 }}>
+                  Activo
+                </div>
+              ) : (
+                <button
+                  onClick={async () => {
+                    await fetch('/api/household/switch', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ householdId: h.id }),
+                    })
+                    window.location.href = '/dashboard'
+                  }}
+                  style={{ fontSize: 12, fontWeight: 600, color: 'var(--body)', background: 'var(--soft)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 999, cursor: 'pointer' }}>
+                  Cambiar
+                </button>
+              )}
+            </div>
+          ))}
+          <div style={{ padding: '13px 18px', borderTop: '1px solid var(--border)' }}>
+            <a href="/onboarding"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 40, background: 'var(--soft)', borderRadius: 'var(--r-sm)', fontSize: 13, fontWeight: 600, color: 'var(--body)', textDecoration: 'none', border: '1.5px solid var(--border)' }}>
+              + Crear otro hogar
+            </a>
+          </div>
         </div>
-      ) : (
-        <button
-          onClick={async () => {
-            await fetch('/api/household/switch', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ householdId: h.id }),
-            })
-            window.location.href = '/dashboard'
-          }}
-          style={{ fontSize: 12, fontWeight: 600, color: 'var(--body)', background: 'var(--soft)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 999, cursor: 'pointer' }}>
-          Cambiar
-        </button>
-      )}
-    </div>
-  ))}
-  <div style={{ padding: '13px 18px', borderTop: '1px solid var(--border)' }}>
-    <a href="/onboarding"
-      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 40, background: 'var(--soft)', borderRadius: 'var(--r-sm)', fontSize: 13, fontWeight: 600, color: 'var(--body)', textDecoration: 'none', border: '1.5px solid var(--border)' }}>
-      + Crear otro hogar
-    </a>
-  </div>
-</div>
 
-        {/* INVITAR */}
         <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, padding: '18px' }}>
           <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Invitar miembros</div>
           <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.5 }}>
