@@ -40,6 +40,8 @@ export default function BudgetClient({
   const [newCat, setNewCat] = useState(DEFAULT_CATEGORIES[0].name)
   const [newAmount, setNewAmount] = useState('')
   const [saving, setSaving] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editAmount, setEditAmount] = useState('')
 
   const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
@@ -86,8 +88,8 @@ export default function BudgetClient({
     }
   }
 
-  async function updateBudget(b: Budget, newAmount: number) {
-    if (newAmount === b.amount || isNaN(newAmount)) return
+  async function updateBudget(b: Budget, newAmt: number) {
+    if (isNaN(newAmt) || newAmt <= 0) return
     await fetch('/api/budget', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -95,12 +97,12 @@ export default function BudgetClient({
         categoryName: b.category.name,
         icon: b.category.icon,
         color: b.category.color,
-        amount: newAmount,
+        amount: newAmt,
         month,
         year,
       }),
     })
-    loadBudgets()
+    await loadBudgets()
   }
 
   const totalBudget = budgets.reduce((s, b) => s + b.amount, 0)
@@ -114,6 +116,7 @@ export default function BudgetClient({
   return (
     <div style={{ minHeight: '100vh', background: 'var(--off)', paddingBottom: 100 }}>
 
+      {/* HEADER */}
       <div style={{ background: 'var(--title)', padding: '52px 20px 20px' }}>
         <div style={{ fontSize: 24, fontWeight: 800, color: '#fff', letterSpacing: '-.02em', marginBottom: 16 }}>
           Presupuesto
@@ -161,6 +164,7 @@ export default function BudgetClient({
         )}
       </div>
 
+      {/* SETUP BANNER */}
       {isSetup && (
         <div style={{ padding: '16px 20px 0' }}>
           <div style={{ background: 'rgba(201,242,106,.1)', border: '1px solid rgba(201,242,106,.3)', borderRadius: 14, padding: '14px 16px', marginBottom: 10 }}>
@@ -181,12 +185,13 @@ export default function BudgetClient({
 
       <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
 
+        {/* LISTA */}
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px', color: 'var(--muted)', fontSize: 14 }}>Cargando...</div>
         ) : budgets.length === 0 && !showAdd ? (
           <div style={{ textAlign: 'center', padding: '40px 20px' }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>📊</div>
-            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 8, letterSpacing: '-.01em' }}>Sin presupuesto aun</div>
+            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 8 }}>Sin presupuesto aun</div>
             <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.5 }}>
               Define cuanto quieres gastar en cada categoria del hogar
             </div>
@@ -196,30 +201,61 @@ export default function BudgetClient({
             {budgets.map((b, i) => {
               const pctB = b.amount > 0 ? Math.min(Math.round((b.spent / b.amount) * 100), 100) : 0
               const over = b.spent > b.amount
+              const isEditing = editingId === b.id
+
               return (
                 <div key={b.id} style={{ padding: '14px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: isEditing ? 12 : 8 }}>
                     <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
                       {b.category.icon}
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 1 }}>{b.category.name}</div>
                       <div style={{ fontSize: 12, color: over ? 'var(--red)' : 'var(--muted)' }}>
-                        ${b.spent.toFixed(0)} gastado {over ? '— excedido por $' + (b.spent - b.amount).toFixed(0) : 'de $' + b.amount.toFixed(0)}
+                        ${b.spent.toFixed(0)} gastado {over ? '— excedido $' + (b.spent - b.amount).toFixed(0) : 'de $' + b.amount.toFixed(0)}
                       </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <span style={{ fontSize: 13, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>$</span>
-                      <input
-                        type="number"
-                        defaultValue={b.amount}
-                        onBlur={e => updateBudget(b, parseFloat(e.target.value))}
-                        style={{ width: 72, height: 36, background: 'var(--soft)', border: '1.5px solid var(--border)', borderRadius: 8, fontSize: 15, fontWeight: 600, textAlign: 'right', paddingRight: 8, color: over ? 'var(--red)' : 'var(--title)', outline: 'none', fontFamily: 'var(--mono)' }}
-                      />
-                    </div>
+                    {!isEditing ? (
+                      <button
+                        onClick={() => { setEditingId(b.id); setEditAmount(b.amount.toString()) }}
+                        style={{ padding: '6px 14px', background: 'var(--soft)', border: '1px solid var(--border)', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer', color: 'var(--body)', flexShrink: 0 }}>
+                        Editar
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setEditingId(null)}
+                        style={{ padding: '6px 14px', background: 'transparent', border: 'none', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer', color: 'var(--muted)', flexShrink: 0 }}>
+                        Cancelar
+                      </button>
+                    )}
                   </div>
+
+                  {isEditing && (
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                      <div style={{ flex: 1, position: 'relative' }}>
+                        <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--mono)', fontSize: 16, color: 'var(--muted)' }}>$</span>
+                        <input
+                          type="number"
+                          value={editAmount}
+                          onChange={e => setEditAmount(e.target.value)}
+                          autoFocus
+                          style={{ width: '100%', height: 44, background: 'var(--soft)', border: '1.5px solid var(--title)', borderRadius: 'var(--r-sm)', padding: '0 12px 0 28px', fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 600, color: 'var(--title)', outline: 'none' }}
+                        />
+                      </div>
+                      <button
+                        onClick={async () => {
+                          await updateBudget(b, parseFloat(editAmount))
+                          setEditingId(null)
+                        }}
+                        disabled={!editAmount || parseFloat(editAmount) <= 0}
+                        style={{ padding: '0 16px', background: 'var(--title)', color: '#fff', border: 'none', borderRadius: 'var(--r-sm)', fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: !editAmount || parseFloat(editAmount) <= 0 ? .4 : 1 }}>
+                        Guardar
+                      </button>
+                    </div>
+                  )}
+
                   <div style={{ height: 5, background: 'var(--soft)', borderRadius: 999, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', borderRadius: 999, background: over ? 'var(--red)' : b.category.color, width: pctB + '%', transition: 'width .6s' }} />
+                    <div style={{ height: '100%', borderRadius: 999, background: over ? 'var(--red)' : (b.category.color || 'var(--green-dk)'), width: pctB + '%', transition: 'width .6s' }} />
                   </div>
                 </div>
               )
@@ -227,6 +263,7 @@ export default function BudgetClient({
           </div>
         )}
 
+        {/* ADD FORM */}
         {showAdd ? (
           <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, padding: '18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ fontSize: 15, fontWeight: 700 }}>Nueva categoria</div>

@@ -192,13 +192,12 @@ export default async function DashboardPage() {
       </div>
 
       {/* PRESUPUESTO PREVIEW */}
-      <div style={{ padding: '0 20px 16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ fontSize: 15, fontWeight: 700 }}>Presupuesto</div>
-          <a href="/presupuesto" style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500, textDecoration: 'none' }}>
-            Editar
-          </a>
-        </div>
+   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+  <div style={{ fontSize: 15, fontWeight: 700 }}>Presupuesto</div>
+  <a href="/presupuesto" style={{ fontSize: 12, fontWeight: 700, color: 'var(--title)', background: 'var(--soft)', border: '1px solid var(--border)', borderRadius: 999, padding: '5px 12px', textDecoration: 'none' }}>
+    Ver y editar →
+  </a>
+</div>
 
         {monthBudgets.length > 0 ? (
           <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
