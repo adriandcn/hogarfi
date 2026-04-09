@@ -1,6 +1,7 @@
- import { auth } from '@/lib/auth'
+import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { headers } from 'next/headers'
+import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 export async function GET(req: Request) {
@@ -9,11 +10,13 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url)
   const householdIdParam = searchParams.get('householdId')
+  const cookieStore = await cookies()
+  const activeHouseholdId = householdIdParam || cookieStore.get('active_household')?.value
 
   const member = await prisma.householdMember.findFirst({
     where: {
       userId: session.user.id,
-      ...(householdIdParam ? { householdId: householdIdParam } : {}),
+      ...(activeHouseholdId ? { householdId: activeHouseholdId } : {}),
     },
   })
   if (!member) return NextResponse.json({ error: 'No household' }, { status: 404 })
@@ -22,13 +25,11 @@ export async function GET(req: Request) {
   const month = now.getMonth() + 1
   const year = now.getFullYear()
 
-  // Obtener presupuestos del mes actual
   const budgets = await prisma.budget.findMany({
     where: { householdId: member.householdId, month, year },
     include: { category: true },
   })
 
-  // Obtener gastos del mes para calcular lo gastado por categoría
   const startOfMonth = new Date(year, month - 1, 1)
   const endOfMonth = new Date(year, month, 0)
 
@@ -40,7 +41,6 @@ export async function GET(req: Request) {
     include: { category: true },
   })
 
-  // Calcular gastado por categoría
   const spentByCategory: Record<string, number> = {}
   for (const exp of expenses) {
     if (exp.categoryId) {
@@ -63,14 +63,19 @@ export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const cookieStore = await cookies()
+  const activeHouseholdId = cookieStore.get('active_household')?.value
+
   const member = await prisma.householdMember.findFirst({
-    where: { userId: session.user.id },
+    where: {
+      userId: session.user.id,
+      ...(activeHouseholdId ? { householdId: activeHouseholdId } : {}),
+    },
   })
   if (!member) return NextResponse.json({ error: 'No household' }, { status: 404 })
 
   const { categoryName, icon, color, amount, month, year } = await req.json()
 
-  // Crear o obtener categoría
   let category = await prisma.category.findFirst({
     where: { householdId: member.householdId, name: categoryName },
   })
@@ -86,7 +91,6 @@ export async function POST(req: Request) {
     })
   }
 
-  // Crear o actualizar presupuesto
   const budget = await prisma.budget.upsert({
     where: {
       householdId_categoryId_month_year: {
