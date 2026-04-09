@@ -65,7 +65,6 @@ export default async function DashboardPage() {
 
       <div style={{ padding: '52px 20px 20px' }}>
 
-        {/* HEADER */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div>
             <div style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500, marginBottom: 4 }}>
@@ -85,7 +84,6 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* BALANCE CARD */}
         <div style={{ background: 'var(--title)', borderRadius: 20, padding: '20px', marginBottom: 12 }}>
           {totalBudget > 0 ? (
             <div>
@@ -130,7 +128,6 @@ export default async function DashboardPage() {
           )}
         </div>
 
-        {/* MEMBER CHIPS */}
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
           {members.map(m => {
             const total = balances[m.id]?.total ?? 0
@@ -151,7 +148,6 @@ export default async function DashboardPage() {
 
       </div>
 
-      {/* MY BALANCE */}
       {myNet !== 0 && (
         <div style={{ margin: '0 20px 16px' }}>
           <div style={{ background: myNet > 0 ? 'rgba(201,242,106,.1)' : 'rgba(255,90,60,.05)', border: '1px solid ' + (myNet > 0 ? 'rgba(201,242,106,.3)' : 'rgba(255,90,60,.2)'), borderRadius: 14, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -179,7 +175,6 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* STATS */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, margin: '0 20px 16px' }}>
         <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px' }}>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Gastado</div>
@@ -191,13 +186,13 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* PRESUPUESTO PREVIEW */}
-   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-  <div style={{ fontSize: 15, fontWeight: 700 }}>Presupuesto</div>
-  <a href="/presupuesto" style={{ fontSize: 12, fontWeight: 700, color: 'var(--title)', background: 'var(--soft)', border: '1px solid var(--border)', borderRadius: 999, padding: '5px 12px', textDecoration: 'none' }}>
-    Ver y editar →
-  </a>
-</div>
+      <div style={{ padding: '0 20px 16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>Presupuesto</div>
+          <a href="/presupuesto" style={{ fontSize: 12, fontWeight: 700, color: 'var(--title)', background: 'var(--soft)', border: '1px solid var(--border)', borderRadius: 999, padding: '5px 12px', textDecoration: 'none' }}>
+            Ver y editar
+          </a>
+        </div>
 
         {monthBudgets.length > 0 ? (
           <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
@@ -228,7 +223,7 @@ export default async function DashboardPage() {
             {monthBudgets.length > 3 && (
               <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
                 <a href="/presupuesto" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none', fontWeight: 500 }}>
-                  Ver todas las categorias →
+                  Ver todas las categorias
                 </a>
               </div>
             )}
@@ -250,7 +245,6 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      {/* ULTIMOS GASTOS */}
       <div style={{ padding: '0 20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div style={{ fontSize: 15, fontWeight: 700 }}>Ultimos gastos</div>
