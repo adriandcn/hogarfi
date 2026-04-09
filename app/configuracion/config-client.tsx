@@ -9,6 +9,21 @@ type Member = {
   isMe: boolean
   hasAccount: boolean
 }
+type Household = { id: string; name: string; isActive: boolean; memberCount: number }
+
+export default function ConfigClient({
+  householdId,
+  householdName,
+  members: initialMembers,
+  isAdmin,
+  myHouseholds,
+}: {
+  householdId: string
+  householdName: string
+  members: Member[]
+  isAdmin: boolean
+  myHouseholds: Household[]
+})
 
 export default function ConfigClient({
   householdId,
@@ -194,16 +209,43 @@ export default function ConfigClient({
         </div>
 
         {/* MIS HOGARES */}
-        <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, padding: '18px' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Mis hogares</div>
-          <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.5 }}>
-            Puedes pertenecer a varios hogares — por ejemplo tu familia y tu apartamento compartido.
-          </div>
-          <a href="/onboarding"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 44, background: 'var(--soft)', borderRadius: 'var(--r-sm)', fontSize: 14, fontWeight: 600, color: 'var(--body)', textDecoration: 'none', border: '1.5px solid var(--border)' }}>
-            + Crear otro hogar
-          </a>
+<div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+  <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
+    <div style={{ fontSize: 13, fontWeight: 700 }}>Mis hogares</div>
+  </div>
+  {myHouseholds.map((h, i) => (
+    <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 18px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 14, fontWeight: 600 }}>{h.name}</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>{h.memberCount} miembros</div>
+      </div>
+      {h.isActive ? (
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--green-dk)', background: 'rgba(201,242,106,.15)', padding: '4px 10px', borderRadius: 999 }}>
+          Activo
         </div>
+      ) : (
+        <button
+          onClick={async () => {
+            await fetch('/api/household/switch', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ householdId: h.id }),
+            })
+            window.location.href = '/dashboard'
+          }}
+          style={{ fontSize: 12, fontWeight: 600, color: 'var(--body)', background: 'var(--soft)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 999, cursor: 'pointer' }}>
+          Cambiar
+        </button>
+      )}
+    </div>
+  ))}
+  <div style={{ padding: '13px 18px', borderTop: '1px solid var(--border)' }}>
+    <a href="/onboarding"
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 40, background: 'var(--soft)', borderRadius: 'var(--r-sm)', fontSize: 13, fontWeight: 600, color: 'var(--body)', textDecoration: 'none', border: '1.5px solid var(--border)' }}>
+      + Crear otro hogar
+    </a>
+  </div>
+</div>
 
         {/* INVITAR */}
         <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, padding: '18px' }}>

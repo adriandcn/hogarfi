@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import BudgetClient from './budget-client'
 
@@ -11,5 +12,7 @@ export default async function PresupuestoPage({
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) redirect('/login')
   const { setup } = await searchParams
-  return <BudgetClient isSetup={setup === 'true'} />
+  const cookieStore = await cookies()
+  const activeHouseholdId = cookieStore.get('active_household')?.value
+  return <BudgetClient isSetup={setup === 'true'} activeHouseholdId={activeHouseholdId} />
 }

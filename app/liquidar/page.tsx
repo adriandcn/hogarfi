@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { getBalances, getSuggestedReimbursements } from '@/lib/balances'
 import SettleButton from './settle-button'
 
@@ -9,8 +10,14 @@ export default async function LiquidarPage() {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) redirect('/login')
 
-  const member = await prisma.householdMember.findFirst({
-    where: { userId: session.user.id },
+ const cookieStore = await cookies()
+const activeHouseholdId = cookieStore.get('active_household')?.value
+
+const member = await prisma.householdMember.findFirst({
+  where: {
+    userId: session.user.id,
+    ...(activeHouseholdId ? { householdId: activeHouseholdId } : {}),
+  },
     include: {
       household: {
         include: {

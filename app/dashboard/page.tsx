@@ -3,13 +3,19 @@ import { prisma } from '@/lib/prisma'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getBalances, getSuggestedReimbursements } from '@/lib/balances'
-
+import { cookies } from 'next/headers'
 export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) redirect('/login')
 
-  const member = await prisma.householdMember.findFirst({
-    where: { userId: session.user.id },
+ const cookieStore = await cookies()
+const activeHouseholdId = cookieStore.get('active_household')?.value
+
+const member = await prisma.householdMember.findFirst({
+  where: {
+    userId: session.user.id,
+    ...(activeHouseholdId ? { householdId: activeHouseholdId } : {}),
+  },
     include: {
       household: {
         include: {

@@ -3,12 +3,18 @@ import { prisma } from '@/lib/prisma'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const { searchParams } = new URL(req.url)
+  const householdIdParam = searchParams.get('householdId')
+
   const member = await prisma.householdMember.findFirst({
-    where: { userId: session.user.id },
+    where: {
+      userId: session.user.id,
+      ...(householdIdParam ? { householdId: householdIdParam } : {}),
+    },
   })
   if (!member) return NextResponse.json({ error: 'No household' }, { status: 404 })
 

@@ -25,7 +25,7 @@ const DEFAULT_CATEGORIES = [
   { name: 'Otro', icon: '📦', color: '#9b9690' },
 ]
 
-export default function BudgetClient({ isSetup = false }: { isSetup?: boolean }) {
+export default function BudgetClient({ isSetup = false, activeHouseholdId }: { isSetup?: boolean; activeHouseholdId?: string }) {
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [loading, setLoading] = useState(true)
   const [month, setMonth] = useState(new Date().getMonth() + 1)
@@ -41,16 +41,17 @@ export default function BudgetClient({ isSetup = false }: { isSetup?: boolean })
     loadBudgets()
   }, [month, year])
 
-  async function loadBudgets() {
-    setLoading(true)
-    try {
-      const res = await fetch('/api/budget')
-      const data = await res.json()
-      setBudgets(data.budgets ?? [])
-    } finally {
-      setLoading(false)
-    }
+ async function loadBudgets() {
+  setLoading(true)
+  try {
+    const params = activeHouseholdId ? '?householdId=' + activeHouseholdId : ''
+    const res = await fetch('/api/budget' + params)
+    const data = await res.json()
+    setBudgets(data.budgets ?? [])
+  } finally {
+    setLoading(false)
   }
+}
 
   async function addBudget() {
     if (!newAmount) return
