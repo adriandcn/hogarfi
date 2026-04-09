@@ -63,20 +63,24 @@ export default async function DashboardPage() {
     <div style={{ minHeight: '100vh', background: 'var(--off)', paddingBottom: 90 }}>
 
       {/* HEADER */}
-      <div style={{ padding: '56px 20px 20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-          <div>
-            <div style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500, marginBottom: 4 }}>
-              {household.name} · {monthNames[month]} {year}
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.02em', lineHeight: 1.2 }}>
-              Hola, {myName} 👋
-            </div>
-          </div>
-          <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 700, color: 'var(--title)', flexShrink: 0 }}>
-            {myName[0]}
-          </div>
-        </div>
+  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+  <div>
+    <div style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500, marginBottom: 4 }}>
+      {household.name} · {monthNames[month]} {year}
+    </div>
+    <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.02em', lineHeight: 1.2 }}>
+      Hola, {myName} 👋
+    </div>
+  </div>
+  <div style={{ display: 'flex', gap: 8 }}>
+    <a href="/invitar" style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, textDecoration: 'none' }}>
+      👥
+    </a>
+    <a href="/configuracion" style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--soft)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, textDecoration: 'none' }}>
+      ⚙️
+    </a>
+  </div>
+</div>
 
         {/* BALANCE CARD */}
         <div style={{ background: 'var(--title)', borderRadius: 20, padding: '20px', marginBottom: 12 }}>
