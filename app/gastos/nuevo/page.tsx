@@ -11,9 +11,10 @@ export default function NuevoGastoPage() {
   const [members, setMembers] = useState<Member[]>([])
   const [myMemberId, setMyMemberId] = useState('')
   const [householdId, setHouseholdId] = useState('')
-  const [tab, setTab] = useState<'uno' | 'default' | 'custom'>('uno')
+  const [tab, setTab] = useState<'uno' | 'default' | 'monto' | 'custom'>('uno')
   const [payerId, setPayerId] = useState('')
   const [customShares, setCustomShares] = useState<Record<string, number>>({})
+  const [memberAmounts, setMemberAmounts] = useState<Record<string, number>>({})
   const [category, setCategory] = useState('Comida')
   const [saving, setSaving] = useState(false)
   const [scanning, setScanning] = useState(false)
@@ -40,8 +41,13 @@ export default function NuevoGastoPage() {
           setHouseholdId(data.householdId)
           setPayerId(data.myMemberId)
           const shares: Record<string, number> = {}
-          data.members.forEach((m: Member) => { shares[m.id] = m.defaultShare })
+          const amounts: Record<string, number> = {}
+          data.members.forEach((m: Member) => {
+            shares[m.id] = m.defaultShare
+            amounts[m.id] = 0
+          })
           setCustomShares(shares)
+          setMemberAmounts(amounts)
         }
         setLoadingMembers(false)
       })
@@ -51,6 +57,8 @@ export default function NuevoGastoPage() {
   const amountNum = parseFloat(amount) || 0
   const totalCustom = Object.values(customShares).reduce((s, v) => s + v, 0)
   const customOk = Math.abs(totalCustom - 100) < 0.5
+  const totalMonto = Object.values(memberAmounts).reduce((s, v) => s + v, 0)
+  const montoOk = amountNum > 0 && Math.abs(totalMonto - amountNum) < 0.5
 
   const colors = [
     { bg: '#c9f26a', color: '#1a1814' },
@@ -58,6 +66,13 @@ export default function NuevoGastoPage() {
     { bg: '#fef3c7', color: '#92400e' },
     { bg: '#ede9fe', color: '#5b21b6' },
   ]
+
+  const tabLabels: Record<string, string> = {
+    uno: 'Uno pago',
+    default: 'Por defecto',
+    monto: 'Por monto',
+    custom: 'Personalizado',
+  }
 
   async function handleReceipt(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -88,24 +103,53 @@ export default function NuevoGastoPage() {
     if (!amount || !description || !payerId) return
     setSaving(true)
 
-    const splits = members.map(m => ({
-      memberId: m.id,
-      percentage: tab === 'custom' ? (customShares[m.id] ?? 0) : m.defaultShare,
-      amount: amountNum * (tab === 'custom' ? (customShares[m.id] ?? 0) : m.defaultShare) / 100,
-    }))
+    const splits = members.map(m => {
+      let pct = 0
+      if (tab === 'custom') {
+        pct = customShares[m.id] ?? 0
+      } else if (tab === 'monto') {
+        pct = amountNum > 0 ? Math.round((memberAmounts[m.id] ?? 0) / amountNum * 100) : 0
+      } else {
+        pct = m.defaultShare
+      }
+      return {
+        memberId: m.id,
+        percentage: pct,
+        amount: amountNum * pct / 100,
+      }
+    })
 
     const catIcon = cats.find(c => c.name === category)?.icon ?? '📦'
+
+    // payer es quien mas pago en modo monto
+    let finalPayerId = payerId
+    if (tab === 'monto') {
+      const maxEntry = Object.entries(memberAmounts).sort((a, b) => b[1] - a[1])[0]
+      if (maxEntry) finalPayerId = maxEntry[0]
+    }
 
     const res = await fetch('/api/expense', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ householdId, paidById: payerId, description, amount: amountNum, categoryName: category, icon: catIcon, splits }),
+      body: JSON.stringify({
+        householdId,
+        paidById: finalPayerId,
+        description,
+        amount: amountNum,
+        categoryName: category,
+        icon: catIcon,
+        splits,
+      }),
     })
 
     setSaving(false)
     if (res.ok) router.push('/gastos')
     else alert('Error guardando el gasto')
   }
+
+  const isDisabled = !amount || !description || saving ||
+    (tab === 'custom' && !customOk) ||
+    (tab === 'monto' && !montoOk)
 
   if (loadingMembers) return (
     <div style={{ minHeight: '100vh', background: 'var(--off)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -116,8 +160,7 @@ export default function NuevoGastoPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--off)' }}>
 
-      {/* HEADER */}
-      <div style={{ background: 'var(--title)', padding: '56px 20px 20px' }}>
+      <div style={{ background: 'var(--title)', padding: '52px 20px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <button onClick={() => router.back()} style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,.1)', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             ←
@@ -140,9 +183,9 @@ export default function NuevoGastoPage() {
 
       <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 160 }}>
 
-        {/* AI SCANNER — primero */}
+        {/* AI SCANNER */}
         <div onClick={() => document.getElementById('receipt-input')?.click()}
-          style={{ border: '1.5px dashed var(--border)', borderRadius: 'var(--r-md)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: scanning ? 'default' : 'pointer', background: scanning ? 'rgba(201,242,106,.04)' : receipt ? 'rgba(201,242,106,.06)' : 'transparent' }}>
+          style={{ border: '1.5px dashed var(--border)', borderRadius: 'var(--r-md)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: scanning ? 'default' : 'pointer', background: receipt ? 'rgba(201,242,106,.04)' : 'transparent' }}>
           <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
             {scanning ? '⏳' : receipt ? '✅' : '📸'}
           </div>
@@ -187,10 +230,10 @@ export default function NuevoGastoPage() {
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>Division del gasto</div>
 
           <div style={{ display: 'flex', background: 'var(--soft)', borderRadius: 10, padding: 3, gap: 2, marginBottom: 14 }}>
-            {(['uno', 'default', 'custom'] as const).map(t => (
+            {(['uno', 'default', 'monto', 'custom'] as const).map(t => (
               <button key={t} onClick={() => setTab(t)}
-                style={{ flex: 1, padding: '8px 4px', borderRadius: 8, border: 'none', background: tab === t ? 'var(--white)' : 'transparent', color: tab === t ? 'var(--title)' : 'var(--muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                {t === 'uno' ? 'Uno pago' : t === 'default' ? 'Por defecto' : 'Personalizado'}
+                style={{ flex: 1, padding: '8px 4px', borderRadius: 8, border: 'none', background: tab === t ? 'var(--white)' : 'transparent', color: tab === t ? 'var(--title)' : 'var(--muted)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                {tabLabels[t]}
               </button>
             ))}
           </div>
@@ -271,6 +314,51 @@ export default function NuevoGastoPage() {
             </div>
           )}
 
+          {/* TAB MONTO */}
+          {tab === 'monto' && (
+            <div>
+              <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.5, marginBottom: 12 }}>
+                Ingresa cuanto pago cada uno. El sistema calcula los porcentajes automaticamente.
+              </div>
+              <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', overflow: 'hidden', marginBottom: 10 }}>
+                {members.map((m, i) => {
+                  const c = colors[i % colors.length]
+                  const memberAmt = memberAmounts[m.id] ?? 0
+                  const pct = amountNum > 0 && memberAmt > 0 ? Math.round(memberAmt / amountNum * 100) : 0
+                  return (
+                    <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
+                      <div style={{ width: 34, height: 34, borderRadius: '50%', background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: c.color, flexShrink: 0 }}>
+                        {m.name[0]}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 500 }}>{m.name.split(' ')[0]}</div>
+                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                          {pct > 0 ? pct + '% del total' : 'Cuanto pago?'}
+                        </div>
+                      </div>
+                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                        <span style={{ position: 'absolute', left: 10, fontSize: 14, color: 'var(--muted)', fontFamily: 'var(--mono)', pointerEvents: 'none' }}>$</span>
+                        <input
+                          type="number"
+                          value={memberAmt || ''}
+                          placeholder="0"
+                          onChange={e => setMemberAmounts(prev => ({ ...prev, [m.id]: Number(e.target.value) }))}
+                          style={{ width: 90, height: 38, background: 'var(--soft)', border: '1.5px solid var(--border)', borderRadius: 8, fontSize: 15, fontWeight: 600, textAlign: 'right', paddingRight: 10, paddingLeft: 26, color: 'var(--title)', outline: 'none', fontFamily: 'var(--mono)' }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: montoOk ? 'rgba(201,242,106,.1)' : 'rgba(255,90,60,.06)', border: '1px solid ' + (montoOk ? 'rgba(201,242,106,.35)' : 'rgba(255,90,60,.2)'), borderRadius: 'var(--r-sm)' }}>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>Total ingresado</span>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 15, fontWeight: 500, color: montoOk ? 'var(--green-dk)' : 'var(--red)' }}>
+                  ${totalMonto.toFixed(2)} {amountNum > 0 && ('/ $' + amountNum.toFixed(2))}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* TAB CUSTOM */}
           {tab === 'custom' && (
             <div>
@@ -326,14 +414,12 @@ export default function NuevoGastoPage() {
             </div>
           )}
         </div>
-
       </div>
 
-      {/* SUBMIT */}
       <div style={{ position: 'fixed', bottom: 72, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 430, padding: '16px 20px', background: 'linear-gradient(to top, var(--off) 70%, transparent)' }}>
         <button onClick={handleSave}
-          disabled={!amount || !description || saving || (tab === 'custom' && !customOk)}
-          style={{ width: '100%', height: 52, background: 'var(--title)', color: '#fff', border: 'none', borderRadius: 'var(--r-sm)', fontSize: 15, fontWeight: 700, cursor: 'pointer', opacity: (!amount || !description || saving || (tab === 'custom' && !customOk)) ? .4 : 1 }}>
+          disabled={isDisabled}
+          style={{ width: '100%', height: 52, background: 'var(--title)', color: '#fff', border: 'none', borderRadius: 'var(--r-sm)', fontSize: 15, fontWeight: 700, cursor: 'pointer', opacity: isDisabled ? .4 : 1 }}>
           {saving ? 'Guardando...' : 'Guardar gasto'}
         </button>
       </div>
