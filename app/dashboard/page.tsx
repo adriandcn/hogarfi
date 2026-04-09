@@ -140,7 +140,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* MY BALANCE */}
+      
       {myNet !== 0 && (
         <div style={{ margin: '0 20px 16px' }}>
           <div style={{ background: myNet > 0 ? 'rgba(201,242,106,.1)' : 'rgba(255,90,60,.05)', border: '1px solid ' + (myNet > 0 ? 'rgba(201,242,106,.3)' : 'rgba(255,90,60,.2)'), borderRadius: 14, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
