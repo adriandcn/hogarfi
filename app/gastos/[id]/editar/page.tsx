@@ -118,7 +118,8 @@ export default async function GastosPage() {
               const payer = members.find(m => m.id === exp.paidById)
               const payerName = (payer?.name ?? payer?.user?.name ?? '?').split(' ')[0]
               return (
-                <div key={exp.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
+                <a key={exp.id} href={'/gastos/' + exp.id + '/editar'}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none', textDecoration: 'none', color: 'inherit' }}>
                   <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
                     {exp.category?.icon ?? '💳'}
                   </div>
@@ -149,11 +150,9 @@ export default async function GastosPage() {
                     <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
                       {new Date(exp.createdAt).toLocaleDateString('es', { day: 'numeric', month: 'short' })}
                     </div>
-                    <a href={'/gastos/' + exp.id + '/editar'} style={{ fontSize: 11, color: 'var(--muted)', textDecoration: 'none', fontWeight: 600, background: 'var(--soft)', borderRadius: 4, padding: '2px 6px', display: 'inline-block', marginTop: 4 }}>
-                      Editar
-                    </a>
+                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>→</div>
                   </div>
-                </div>
+                </a>
               )
             })}
           </div>
