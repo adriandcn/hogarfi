@@ -74,7 +74,7 @@ export default function MetasClient() {
 
       <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-        {!loading && goals.length === 0 && !showNew && (
+        {goals.length === 0 && !showNew && (
           <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, padding: '40px 20px', textAlign: 'center' }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>🎯</div>
             <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Sin metas aun</div>
@@ -92,7 +92,7 @@ export default function MetasClient() {
           const pct = getPct(goal)
           const months = getMonthsLeft(goal)
           const bg = catColors[goal.icon] ?? '#f0ede8'
-          const thisMonthContribs = goal.contributions.filter(c => {
+          const thisMonthContribs = (goal.contributions ?? []).filter(c => {
             const d = new Date(c.createdAt)
             const now = new Date()
             return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
@@ -143,7 +143,10 @@ export default function MetasClient() {
           </button>
         ) : (
           <NuevoMetaForm
-            onCreated={goal => { setGoals(prev => [goal, ...prev]); setShowNew(false) }}
+            onCreated={goal => {
+              setGoals(prev => [{ ...goal, contributions: goal.contributions ?? [] }, ...prev])
+              setShowNew(false)
+            }}
             onCancel={() => setShowNew(false)}
           />
         )}
@@ -174,14 +177,18 @@ function NuevoMetaForm({ onCreated, onCancel }: { onCreated: (g: any) => void; o
   async function handleCreate() {
     if (!name || !target) return
     setSaving(true)
-    const res = await fetch('/api/goals', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, icon, targetAmount: targetNum, monthlyTarget: monthly }),
-    })
-    const data = await res.json()
-    setSaving(false)
-    if (res.ok) onCreated(data)
+    try {
+      const res = await fetch('/api/goals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, icon, targetAmount: targetNum, monthlyTarget: monthly }),
+      })
+      const data = await res.json()
+      if (res.ok) onCreated(data)
+      else alert('Error creando la meta')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (

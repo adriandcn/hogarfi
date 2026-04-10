@@ -62,6 +62,12 @@ export async function POST(req: Request) {
       monthlyTarget,
       deadline,
     },
+    include: {
+      contributions: {
+        include: { member: true },
+        orderBy: { createdAt: 'desc' },
+      },
+    },
   })
 
   return NextResponse.json(goal)
