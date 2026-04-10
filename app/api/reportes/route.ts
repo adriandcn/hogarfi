@@ -78,5 +78,16 @@ export async function GET() {
     include: { category: true },
   })
 
-  return NextResponse.json({ monthlyData, budgets, members: member.household.members })
+  const goals = await prisma.goal.findMany({
+  where: { householdId },
+  include: {
+    contributions: {
+      orderBy: { createdAt: 'desc' },
+    },
+  },
+})
+
+return NextResponse.json({ monthlyData, budgets, members: member.household.members, goals })
+
+  
 }

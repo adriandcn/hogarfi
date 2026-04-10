@@ -10,12 +10,23 @@ type MonthData = {
   byMember: { name: string; paid: number }[]
 }
 
+type Goal = {
+  id: string
+  name: string
+  icon: string
+  targetAmount: number
+  currentAmount: number
+  monthlyTarget: number
+  contributions: { amount: number; createdAt: string }[]
+}
+
 export default function ReportesClient() {
-  const [data, setData] = useState<{ monthlyData: MonthData[]; budgets: any[] } | null>(null)
+  const [data, setData] = useState<{ monthlyData: MonthData[]; budgets: any[]; goals: Goal[] } | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeMonth, setActiveMonth] = useState(0)
 
   const monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+  const monthNamesFull = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
   useEffect(() => {
     fetch('/api/reportes')
@@ -33,7 +44,7 @@ export default function ReportesClient() {
   if (!data || !data.monthlyData?.length) return (
     <div style={{ minHeight: '100vh', background: 'var(--off)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', textAlign: 'center' }}>
       <div style={{ fontSize: 40, marginBottom: 16 }}>📊</div>
-      <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, letterSpacing: '-.01em' }}>Sin datos aun</div>
+      <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Sin datos aun</div>
       <div style={{ fontSize: 14, color: 'var(--muted)' }}>Agrega gastos para ver tus reportes</div>
     </div>
   )
@@ -43,10 +54,30 @@ export default function ReportesClient() {
   const diff = prev ? current.total - prev.total : 0
   const maxCategory = Math.max(...current.byCategory.map(c => c.total), 1)
 
+  // Abonos a metas del mes activo
+  const goalsWithMonthData = (data.goals ?? []).map(goal => {
+    const monthContribs = goal.contributions.filter(c => {
+      const d = new Date(c.createdAt)
+      return d.getMonth() + 1 === current.month && d.getFullYear() === current.year
+    })
+    const monthAbonado = monthContribs.reduce((s, c) => s + c.amount, 0)
+    const pct = Math.min(Math.round((goal.currentAmount / goal.targetAmount) * 100), 100)
+    const remaining = goal.targetAmount - goal.currentAmount
+    const monthsLeft = goal.monthlyTarget > 0 ? Math.ceil(remaining / goal.monthlyTarget) : null
+    return { ...goal, monthAbonado, pct, monthsLeft }
+  }).filter(g => g.monthAbonado > 0 || g.currentAmount > 0)
+
+  const totalAbonado = goalsWithMonthData.reduce((s, g) => s + g.monthAbonado, 0)
+  const totalGoalMonthly = (data.goals ?? []).reduce((s, g) => s + g.monthlyTarget, 0)
+
+  const catColors: Record<string, string> = {
+    '🚗': '#faeeda', '🏠': '#eaf3de', '🏖️': '#e6f1fb',
+    '📚': '#eeedfe', '🛡️': '#fcebeb', '🎯': '#f0ede8',
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--off)', paddingBottom: 100 }}>
 
-      {/* HEADER */}
       <div style={{ background: 'var(--title)', padding: '52px 20px 20px' }}>
         <div style={{ fontSize: 24, fontWeight: 800, color: '#fff', letterSpacing: '-.02em', marginBottom: 16 }}>
           Reportes
@@ -66,12 +97,12 @@ export default function ReportesClient() {
         {/* RESUMEN */}
         <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, padding: '18px' }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 14 }}>
-            Resumen
+            Resumen — {monthNamesFull[current.month - 1]} {current.year}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Total gastado</div>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 500 }}>${current.total.toFixed(0)}</div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 500, color: 'var(--red)' }}>${current.total.toFixed(0)}</div>
             </div>
             <div>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>vs mes anterior</div>
@@ -80,7 +111,7 @@ export default function ReportesClient() {
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Gastos</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Num. gastos</div>
               <div style={{ fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 500 }}>{current.count}</div>
             </div>
             <div>
@@ -90,7 +121,82 @@ export default function ReportesClient() {
               </div>
             </div>
           </div>
+          {totalAbonado > 0 && (
+            <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 2 }}>Abonado a metas</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)' }}>Meta mensual: ${totalGoalMonthly.toFixed(0)}</div>
+              </div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 700, color: totalAbonado >= totalGoalMonthly ? 'var(--green-dk)' : 'var(--title)' }}>
+                ${totalAbonado.toFixed(0)}
+                {totalAbonado >= totalGoalMonthly && <span style={{ fontSize: 14, marginLeft: 4 }}>✓</span>}
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* METAS — AVANCE */}
+        {goalsWithMonthData.length > 0 && (
+          <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '.08em', textTransform: 'uppercase' }}>
+                Avance de metas
+              </div>
+              <a href="/metas" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none', fontWeight: 500 }}>Ver todas</a>
+            </div>
+            {goalsWithMonthData.map((goal, i) => (
+              <div key={goal.id} style={{ padding: '14px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 10, background: catColors[goal.icon] ?? '#f0ede8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
+                    {goal.icon}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>{goal.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                      ${goal.currentAmount.toFixed(0)} de ${goal.targetAmount.toFixed(0)} · {goal.pct}%
+                      {goal.monthsLeft !== null && goal.monthsLeft > 0 && (
+                        <span> · {goal.monthsLeft} meses restantes</span>
+                      )}
+                      {goal.monthsLeft !== null && goal.monthsLeft <= 0 && (
+                        <span style={{ color: 'var(--green-dk)', fontWeight: 600 }}> · Alcanzada!</span>
+                      )}
+                    </div>
+                  </div>
+                  {goal.monthAbonado > 0 ? (
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 700, color: 'var(--green-dk)' }}>
+                        +${goal.monthAbonado.toFixed(0)}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--muted)' }}>este mes</div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 11, color: 'var(--red)', fontWeight: 500, background: 'rgba(255,90,60,.06)', padding: '3px 8px', borderRadius: 6, flexShrink: 0 }}>
+                      Sin abono
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ height: 6, background: 'var(--soft)', borderRadius: 999, overflow: 'hidden', marginBottom: 6 }}>
+                  <div style={{ height: '100%', borderRadius: 999, background: goal.pct >= 100 ? 'var(--green-dk)' : 'var(--title)', width: goal.pct + '%', transition: 'width .6s' }} />
+                </div>
+
+                {goal.monthlyTarget > 0 && goal.monthAbonado > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                      Meta mensual: ${goal.monthlyTarget.toFixed(0)}
+                    </div>
+                    <div style={{ height: 4, width: 80, background: 'var(--soft)', borderRadius: 999, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', borderRadius: 999, background: goal.monthAbonado >= goal.monthlyTarget ? 'var(--green-dk)' : '#378add', width: Math.min((goal.monthAbonado / goal.monthlyTarget) * 100, 100) + '%' }} />
+                    </div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: goal.monthAbonado >= goal.monthlyTarget ? 'var(--green-dk)' : 'var(--muted)' }}>
+                      {goal.monthAbonado >= goal.monthlyTarget ? 'Al dia ✓' : Math.round((goal.monthAbonado / goal.monthlyTarget) * 100) + '%'}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* POR CATEGORIA */}
         <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
@@ -114,7 +220,7 @@ export default function ReportesClient() {
                     <span style={{ fontSize: 18 }}>{cat.icon}</span>
                     <span style={{ fontSize: 13, fontWeight: 600 }}>{cat.name}</span>
                     {over && (
-                      <span style={{ fontSize: 10, background: 'var(--red-lt)', color: 'var(--red)', borderRadius: 4, padding: '2px 6px', fontWeight: 700 }}>
+                      <span style={{ fontSize: 10, background: 'rgba(255,90,60,.1)', color: 'var(--red)', borderRadius: 4, padding: '2px 6px', fontWeight: 700 }}>
                         Excedido
                       </span>
                     )}
