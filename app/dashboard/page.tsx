@@ -25,6 +25,14 @@ export default async function DashboardPage() {
             include: { splits: true, category: true },
             orderBy: { createdAt: 'desc' },
           },
+          goals: {
+            include: {
+              contributions: {
+                orderBy: { createdAt: 'desc' },
+              },
+            },
+            orderBy: { createdAt: 'asc' },
+          },
           budgets: { include: { category: true } },
         },
       },
@@ -56,6 +64,15 @@ export default async function DashboardPage() {
   const totalBudget = monthBudgets.reduce((s, b) => s + b.amount, 0)
   const budgetRemaining = totalBudget - totalSpent
   const budgetPct = totalBudget > 0 ? Math.min(Math.round((totalSpent / totalBudget) * 100), 100) : 0
+
+  const totalGoalMonthly = household.goals.reduce((s, g) => s + g.monthlyTarget, 0)
+  const totalGoalAbonado = household.goals.reduce((s, g) => {
+    const thisMonth = g.contributions.filter(c => {
+      const d = new Date(c.createdAt)
+      return d.getMonth() === month && d.getFullYear() === year
+    }).reduce((cs, c) => cs + c.amount, 0)
+    return s + thisMonth
+  }, 0)
 
   const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
   const myName = (member.name ?? session.user.name ?? 'tu').split(' ')[0]
@@ -185,6 +202,98 @@ export default async function DashboardPage() {
           <div style={{ fontFamily: 'var(--mono)', fontSize: 24, fontWeight: 500 }}>{monthExpenses.length}</div>
         </div>
       </div>
+
+      {household.goals.length > 0 && (
+        <div style={{ padding: '0 20px 16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>Metas</div>
+            <a href="/metas" style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500, textDecoration: 'none' }}>Ver todas</a>
+          </div>
+
+          {totalGoalMonthly > 0 && (
+            <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 16px', marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 2 }}>Abonado a metas este mes</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)' }}>Meta mensual: ${totalGoalMonthly.toFixed(0)}</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700, color: totalGoalAbonado >= totalGoalMonthly ? 'var(--green-dk)' : 'var(--title)' }}>
+                  ${totalGoalAbonado.toFixed(0)}
+                </div>
+                {totalGoalAbonado >= totalGoalMonthly && (
+                  <div style={{ fontSize: 11, color: 'var(--green-dk)', fontWeight: 600 }}>Al dia ✓</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+            {household.goals.slice(0, 3).map((goal, i) => {
+              const pct = Math.min(Math.round((goal.currentAmount / goal.targetAmount) * 100), 100)
+              const months = goal.monthlyTarget > 0
+                ? Math.ceil((goal.targetAmount - goal.currentAmount) / goal.monthlyTarget)
+                : null
+              const thisMonthTotal = goal.contributions
+                .filter(c => {
+                  const d = new Date(c.createdAt)
+                  return d.getMonth() === month && d.getFullYear() === year
+                })
+                .reduce((s, c) => s + c.amount, 0)
+              const abonado = thisMonthTotal > 0
+
+              return (
+                <div key={goal.id} style={{ padding: '14px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                    <span style={{ fontSize: 20, flexShrink: 0 }}>{goal.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {goal.name}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                        ${goal.currentAmount.toFixed(0)} de ${goal.targetAmount.toFixed(0)}
+                        {months !== null && months > 0 && <span> · {months} meses</span>}
+                        {months !== null && months <= 0 && <span style={{ color: 'var(--green-dk)', fontWeight: 600 }}> · Alcanzada!</span>}
+                      </div>
+                    </div>
+                    <a href={'/metas/' + goal.id}
+                      style={{ fontSize: 11, fontWeight: 700, color: abonado ? 'var(--green-dk)' : 'var(--title)', background: abonado ? 'rgba(201,242,106,.15)' : 'var(--soft)', border: '1px solid ' + (abonado ? 'rgba(201,242,106,.3)' : 'var(--border)'), borderRadius: 999, padding: '5px 10px', textDecoration: 'none', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                      {abonado ? '+$' + thisMonthTotal.toFixed(0) + ' ✓' : '+ Abonar'}
+                    </a>
+                  </div>
+                  <div style={{ height: 4, background: 'var(--soft)', borderRadius: 999, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: 999, background: pct >= 100 ? 'var(--green-dk)' : 'var(--title)', width: pct + '%', transition: 'width .4s' }} />
+                  </div>
+                </div>
+              )
+            })}
+            {household.goals.length > 3 && (
+              <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
+                <a href="/metas" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none', fontWeight: 500 }}>
+                  Ver todas las metas
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {household.goals.length === 0 && (
+        <div style={{ padding: '0 20px 16px' }}>
+          <a href="/metas" style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'var(--white)', border: '1.5px dashed var(--border)', borderRadius: 16, padding: '16px', textDecoration: 'none' }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(201,242,106,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
+              🎯
+            </div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--title)', marginBottom: 2 }}>
+                Define metas del hogar
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.4 }}>
+                Un auto, vacaciones, la entrada de una casa
+              </div>
+            </div>
+          </a>
+        </div>
+      )}
 
       <div style={{ padding: '0 20px 16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
