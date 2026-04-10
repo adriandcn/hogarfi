@@ -86,11 +86,22 @@ export async function GET() {
     }
   }))
 
-  // Traer budgets de TODOS los meses
-  const budgets = await prisma.budget.findMany({
+  // Traer todos los budgets del hogar
+  const allBudgets = await prisma.budget.findMany({
     where: { householdId },
     include: { category: true },
+    orderBy: [{ year: 'desc' }, { month: 'desc' }],
   })
+
+  // Para cada mes de uniqueMonths, si no tiene budget propio usar el mas reciente
+  const getBudgetsForMonth = (month: number, year: number) => {
+    const exact = allBudgets.filter(b => b.month === month && b.year === year)
+    if (exact.length > 0) return exact
+    // Usar los mas recientes disponibles
+    if (allBudgets.length === 0) return []
+    const latest = allBudgets[0]
+    return allBudgets.filter(b => b.month === latest.month && b.year === latest.year)
+  }
 
   const goals = await prisma.goal.findMany({
     where: { householdId },
@@ -116,9 +127,16 @@ export async function GET() {
     balancesForClient[id] = { paid: (bal as any).paid, total: (bal as any).total }
   }
 
+  // Devolver budgets por mes para que el cliente pueda usarlos
+  const budgetsByMonth = uniqueMonths.map(({ month, year }) => ({
+    month,
+    year,
+    budgets: getBudgetsForMonth(month, year),
+  }))
+
   return NextResponse.json({
     monthlyData,
-    budgets,
+    budgetsByMonth,
     members: member.household.members.map(m => ({
       id: m.id,
       name: m.name ?? m.user?.name ?? 'Sin nombre',

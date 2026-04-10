@@ -127,18 +127,19 @@ export default function ReportesClient() {
 
   const goals: Goal[] = data.goals ?? []
   const members: Member[] = data.members ?? []
-  const allBudgets: any[] = data.budgets ?? []
   const reimbursements: Reimbursement[] = (data.reimbursements ?? []).filter(
     (r: Reimbursement) => !settledKeys.has(r.from + r.to)
   )
 
-  // Budgets del mes activo
-  const currentBudgets = allBudgets.filter((b: any) => b.month === current.month && b.year === current.year)
+  // Budgets del mes activo (con fallback al mas reciente)
+  const currentBudgetEntry = (data.budgetsByMonth ?? []).find(
+    (b: any) => b.month === current.month && b.year === current.year
+  )
+  const currentBudgets: any[] = currentBudgetEntry?.budgets ?? []
   const hasBudget = currentBudgets.length > 0
   const totalBudget = currentBudgets.reduce((s: number, b: any) => s + b.amount, 0)
   const totalSpent = current.total
   const libre = hasBudget ? totalBudget - totalSpent : null
-
   const totalGoalMonthly = goals.reduce((s, g) => s + g.monthlyTarget, 0)
 
   const goalsThisMonth = goals.map(goal => {
@@ -415,7 +416,7 @@ export default function ReportesClient() {
             <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Sin gastos este mes</div>
           ) : current.byCategory.map((cat: any, i: number) => {
             const budget = currentBudgets.find((b: any) => b.category?.name === cat.name)
-            const pct = budget ? Math.min(Math.round((cat.total / budget.amount) * 100), 100) : 50
+            const pct = budget ? Math.min(Math.round((cat.total / budget.amount) * 100), 100) : 40
             const over = budget && cat.total > budget.amount
             const remaining = budget ? budget.amount - cat.total : null
             return (
@@ -433,7 +434,7 @@ export default function ReportesClient() {
                   </div>
                 </div>
                 <div style={{ height: 4, background: 'var(--soft)', borderRadius: 999, overflow: 'hidden', marginBottom: 4 }}>
-                  <div style={{ height: '100%', borderRadius: 999, background: over ? 'var(--red)' : (cat.color || 'var(--green-dk)'), width: (budget ? pct : 40) + '%', transition: 'width .5s' }} />
+                  <div style={{ height: '100%', borderRadius: 999, background: over ? 'var(--red)' : (cat.color || 'var(--green-dk)'), width: pct + '%', transition: 'width .5s' }} />
                 </div>
                 {remaining !== null && (
                   <div style={{ fontSize: 10, color: over ? 'var(--red)' : 'var(--muted)', fontWeight: over ? 600 : 400 }}>
