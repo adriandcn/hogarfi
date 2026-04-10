@@ -82,6 +82,7 @@ model Household {
   members      HouseholdMember[]
   expenses     Expense[]
   budgets      Budget[]
+  goals Goal[]
   invitations  Invitation[]
   subscription Subscription?
 }
@@ -94,7 +95,7 @@ model HouseholdMember {
   role         Role     @default(MEMBER)
   defaultShare Float
   joinedAt     DateTime @default(now())
-
+goalContributions GoalContribution[]
   household Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
   user      BetterAuthUser? @relation(fields: [userId], references: [id], onDelete: Cascade)
   splits    ExpenseSplit[]
@@ -215,4 +216,29 @@ enum SubStatus {
   ACTIVE
   CANCELED
   PAST_DUE
+}
+
+model Goal {
+  id            String              @id @default(cuid())
+  householdId   String
+  name          String
+  icon          String              @default("🎯")
+  targetAmount  Float
+  currentAmount Float               @default(0)
+  monthlyTarget Float               @default(0)
+  deadline      DateTime?
+  createdAt     DateTime            @default(now())
+  household     Household           @relation(fields: [householdId], references: [id])
+  contributions GoalContribution[]
+}
+
+model GoalContribution {
+  id        String   @id @default(cuid())
+  goalId    String
+  memberId  String
+  amount    Float
+  note      String?
+  createdAt DateTime @default(now())
+  goal      Goal     @relation(fields: [goalId], references: [id])
+  member    HouseholdMember @relation(fields: [memberId], references: [id])
 }

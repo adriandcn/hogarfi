@@ -10,7 +10,7 @@ if (pathname === '/' || hideOn.some(p => pathname.startsWith(p))) return null
     { href: '/dashboard', label: 'Inicio', icon: '🏠' },
     { href: '/gastos', label: 'Gastos', icon: '💳' },
     { href: '/gastos/nuevo', label: '', icon: '+', isCenter: true },
-    { href: '/liquidar', label: 'Liquidar', icon: '⚖️' },
+    { href: '/metas', label: 'Metas', icon: '🎯' },
     { href: '/reportes', label: 'Reportes', icon: '📈' },
   ]
 
