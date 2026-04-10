@@ -86,9 +86,9 @@ export async function GET() {
     }
   }))
 
-  const latestMonth = uniqueMonths[0]
+  // Traer budgets de TODOS los meses
   const budgets = await prisma.budget.findMany({
-    where: { householdId, month: latestMonth.month, year: latestMonth.year },
+    where: { householdId },
     include: { category: true },
   })
 
@@ -97,7 +97,6 @@ export async function GET() {
     include: { contributions: { orderBy: { createdAt: 'desc' } } },
   })
 
-  // Balances y reimbursements
   const balances = getBalances(allExpenses as any)
   const rawReimbursements = getSuggestedReimbursements(balances)
   const reimbursements = rawReimbursements.map(r => {
@@ -114,7 +113,7 @@ export async function GET() {
 
   const balancesForClient: Record<string, { paid: number; total: number }> = {}
   for (const [id, bal] of Object.entries(balances)) {
-    balancesForClient[id] = { paid: bal.paid, total: bal.total }
+    balancesForClient[id] = { paid: (bal as any).paid, total: (bal as any).total }
   }
 
   return NextResponse.json({

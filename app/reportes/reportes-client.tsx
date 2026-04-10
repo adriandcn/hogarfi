@@ -35,7 +35,6 @@ type Member = {
 }
 
 const monthNamesShort = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
-const monthNamesFull = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
 const catColors: Record<string, string> = {
   '🚗': '#faeeda', '🏠': '#eaf3de', '🏖️': '#e6f1fb',
@@ -128,14 +127,18 @@ export default function ReportesClient() {
 
   const goals: Goal[] = data.goals ?? []
   const members: Member[] = data.members ?? []
+  const allBudgets: any[] = data.budgets ?? []
   const reimbursements: Reimbursement[] = (data.reimbursements ?? []).filter(
     (r: Reimbursement) => !settledKeys.has(r.from + r.to)
   )
-  const budgets: any[] = data.budgets ?? []
-  const hasBudget = budgets.length > 0
 
-  const totalBudget = budgets.reduce((s: number, b: any) => s + b.amount, 0)
+  // Budgets del mes activo
+  const currentBudgets = allBudgets.filter((b: any) => b.month === current.month && b.year === current.year)
+  const hasBudget = currentBudgets.length > 0
+  const totalBudget = currentBudgets.reduce((s: number, b: any) => s + b.amount, 0)
   const totalSpent = current.total
+  const libre = hasBudget ? totalBudget - totalSpent : null
+
   const totalGoalMonthly = goals.reduce((s, g) => s + g.monthlyTarget, 0)
 
   const goalsThisMonth = goals.map(goal => {
@@ -155,14 +158,12 @@ export default function ReportesClient() {
   })
 
   const totalAbonado = goalsThisMonth.reduce((s, g) => s + g.monthAbonado, 0)
-  const libre = hasBudget ? totalBudget - totalSpent : null
-
   const visibleGoals = showAllMetas ? goalsThisMonth : goalsThisMonth.slice(0, 2)
   const visibleReimbursements = showAllLiquidar ? reimbursements : reimbursements.slice(0, 2)
   const maxTotal = Math.max(...data.monthlyData.map((m: MonthData) => m.total), 1)
 
   const abonoGoal = goals.find(g => g.id === abonoGoalId)
-  const quickAmounts = abonoGoal?.monthlyTarget > 0
+  const quickAmounts = abonoGoal && abonoGoal.monthlyTarget > 0
     ? [Math.round(abonoGoal.monthlyTarget * 0.5), abonoGoal.monthlyTarget, Math.round(abonoGoal.monthlyTarget * 1.5)]
     : [100, 200, 500]
 
@@ -185,7 +186,7 @@ export default function ReportesClient() {
 
       <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-        {/* 1 — RESUMEN 3 NUMEROS */}
+        {/* 1 — 3 NUMEROS */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
           <div style={{ background: 'rgba(255,90,60,.08)', border: '1px solid rgba(255,90,60,.15)', borderRadius: 12, padding: '12px 8px', textAlign: 'center' }}>
             <div style={{ fontSize: 10, color: 'var(--red)', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', marginBottom: 4 }}>Gastado</div>
@@ -207,13 +208,13 @@ export default function ReportesClient() {
             <div style={{ background: libre! >= 0 ? 'rgba(201,242,106,.1)' : 'rgba(255,90,60,.08)', border: '1px solid ' + (libre! >= 0 ? 'rgba(201,242,106,.3)' : 'rgba(255,90,60,.15)'), borderRadius: 12, padding: '12px 8px', textAlign: 'center' }}>
               <div style={{ fontSize: 10, color: libre! >= 0 ? 'var(--green-dk)' : 'var(--red)', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', marginBottom: 4 }}>Libre</div>
               <div style={{ fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 500, color: libre! >= 0 ? 'var(--green-dk)' : 'var(--red)' }}>${Math.abs(libre!).toFixed(0)}</div>
-              <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 3 }}>{libre! >= 0 ? 'disponible' : 'excedido'}</div>
+              <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 3 }}>{libre! >= 0 ? 'del presupuesto' : 'excedido'}</div>
             </div>
           ) : (
-            <a href="/presupuesto?setup=true" style={{ background: 'var(--soft)', border: '1px dashed var(--border)', borderRadius: 12, padding: '12px 8px', textAlign: 'center', textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, marginBottom: 4 }}>Libre</div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.3 }}>Sin presupuesto</div>
-              <div style={{ fontSize: 10, color: '#185fa5', marginTop: 3, fontWeight: 600 }}>Configurar →</div>
+            <a href="/presupuesto?setup=true"
+              style={{ background: 'var(--soft)', border: '1.5px dashed var(--border)', borderRadius: 12, padding: '12px 8px', textAlign: 'center', textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+              <div style={{ fontSize: 18 }}>📊</div>
+              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, lineHeight: 1.3 }}>Configura presupuesto</div>
             </a>
           )}
         </div>
@@ -234,7 +235,7 @@ export default function ReportesClient() {
               const pctAcordado = memberDef?.defaultShare ?? 0
               const sobre = m.paid - acordado
               const c = avatarColors[i % avatarColors.length]
-              const isOver = m.paid > acordado
+              const isOver = m.paid > acordado + 1
               return (
                 <div key={i} style={{ padding: '12px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
@@ -410,11 +411,10 @@ export default function ReportesClient() {
           <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
             <div style={{ fontSize: 13, fontWeight: 700 }}>Gastos vs presupuesto</div>
           </div>
-
           {current.byCategory.length === 0 ? (
             <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Sin gastos este mes</div>
           ) : current.byCategory.map((cat: any, i: number) => {
-            const budget = budgets.find((b: any) => b.category?.name === cat.name)
+            const budget = currentBudgets.find((b: any) => b.category?.name === cat.name)
             const pct = budget ? Math.min(Math.round((cat.total / budget.amount) * 100), 100) : 50
             const over = budget && cat.total > budget.amount
             const remaining = budget ? budget.amount - cat.total : null
@@ -427,13 +427,13 @@ export default function ReportesClient() {
                     {over && <span style={{ fontSize: 10, background: 'rgba(255,90,60,.1)', color: 'var(--red)', borderRadius: 4, padding: '2px 6px', fontWeight: 700 }}>Excedido</span>}
                     {!budget && <span style={{ fontSize: 10, background: 'var(--soft)', color: 'var(--muted)', borderRadius: 4, padding: '2px 6px' }}>Sin limite</span>}
                   </div>
-                  <div style={{ textAlign: 'right' }}>
+                  <div>
                     <span style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 500, color: over ? 'var(--red)' : 'var(--title)' }}>${cat.total.toFixed(0)}</span>
                     {budget && <span style={{ fontSize: 11, color: 'var(--muted)' }}> / ${budget.amount.toFixed(0)}</span>}
                   </div>
                 </div>
                 <div style={{ height: 4, background: 'var(--soft)', borderRadius: 999, overflow: 'hidden', marginBottom: 4 }}>
-                  <div style={{ height: '100%', borderRadius: 999, background: over ? 'var(--red)' : (cat.color || 'var(--green-dk)'), width: pct + '%', transition: 'width .5s' }} />
+                  <div style={{ height: '100%', borderRadius: 999, background: over ? 'var(--red)' : (cat.color || 'var(--green-dk)'), width: (budget ? pct : 40) + '%', transition: 'width .5s' }} />
                 </div>
                 {remaining !== null && (
                   <div style={{ fontSize: 10, color: over ? 'var(--red)' : 'var(--muted)', fontWeight: over ? 600 : 400 }}>
@@ -443,7 +443,6 @@ export default function ReportesClient() {
               </div>
             )
           })}
-
           {!hasBudget && (
             <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'rgba(55,138,221,.04)' }}>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>
@@ -462,7 +461,6 @@ export default function ReportesClient() {
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 16 }}>
             Cada barra muestra lo gastado y lo abonado a metas por mes
           </div>
-
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 100, marginBottom: 8 }}>
             {[...data.monthlyData].reverse().map((m: MonthData, i: number) => {
               const gastoH = Math.max((m.total / maxTotal) * 85, 4)
@@ -476,7 +474,6 @@ export default function ReportesClient() {
               }, 0)
               const metaH = Math.max((monthGoalAbonado / maxTotal) * 85, monthGoalAbonado > 0 ? 6 : 0)
               const isActive = i === data.monthlyData.length - 1 - activeMonth
-
               return (
                 <div key={i} onClick={() => setActiveMonth(data.monthlyData.length - 1 - i)}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, cursor: 'pointer' }}>
@@ -496,7 +493,6 @@ export default function ReportesClient() {
               )
             })}
           </div>
-
           <div style={{ display: 'flex', gap: 14, marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <div style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--title)' }} />
@@ -507,7 +503,6 @@ export default function ReportesClient() {
               <span style={{ fontSize: 11, color: 'var(--muted)' }}>Metas abonadas</span>
             </div>
           </div>
-
           {data.monthlyData.length > 1 && (
             <div style={{ padding: '10px 12px', background: 'var(--soft)', borderRadius: 8, fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
               {diff > 0
