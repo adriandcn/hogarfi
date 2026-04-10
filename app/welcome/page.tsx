@@ -33,61 +33,90 @@ export default async function WelcomePage() {
     { bg: '#dbeafe', color: '#1e40af' },
     { bg: '#fef3c7', color: '#92400e' },
     { bg: '#ede9fe', color: '#5b21b6' },
+    { bg: '#fce7f3', color: '#9d174d' },
   ]
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--black)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--black)', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
 
-      {/* TOP */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px 32px', textAlign: 'center' }}>
+      {/* Fondo decorativo */}
+      <div style={{ position: 'absolute', top: -120, left: '50%', transform: 'translateX(-50%)', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(201,242,106,.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-        <div style={{ width: 100, height: 100, background: 'rgba(201,242,106,.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 32, fontSize: 48 }}>
-          🎉
+      {/* CONTENIDO */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '64px 28px 32px', position: 'relative' }}>
+
+        {/* Badge */}
+        <div style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(201,242,106,.1)', border: '1px solid rgba(201,242,106,.2)', borderRadius: 999, padding: '5px 12px', marginBottom: 40 }}>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)' }} />
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--green)', letterSpacing: '.06em', textTransform: 'uppercase' }}>Hogar creado</span>
         </div>
 
-        <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.35)', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 12 }}>
-          Hogar creado
+        {/* Titulo principal */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 38, fontWeight: 900, color: '#fff', letterSpacing: '-.03em', lineHeight: 1.1, marginBottom: 4 }}>
+            {household.name}
+          </div>
+          <div style={{ fontSize: 38, fontWeight: 900, letterSpacing: '-.03em', lineHeight: 1.1 }}>
+            <span style={{ color: 'var(--green)' }}>ya tiene su hogar</span>
+          </div>
         </div>
 
-        <div style={{ fontSize: 30, fontWeight: 800, color: '#fff', letterSpacing: '-.02em', lineHeight: 1.15, marginBottom: 16 }}>
-          {household.name}<br />esta listo
+        {/* Mensaje inspirador */}
+        <div style={{ fontSize: 16, color: 'rgba(255,255,255,.5)', lineHeight: 1.7, marginBottom: 40, maxWidth: 340 }}>
+          Juntos trabajaremos para alcanzar sus metas y mantener las finanzas del hogar saludables. Cada gasto registrado es un paso hacia una vida mas organizada.
         </div>
 
-        <div style={{ fontSize: 15, color: 'rgba(255,255,255,.45)', lineHeight: 1.6, marginBottom: 48, maxWidth: 280 }}>
-          Ahora puedes agregar tu primer gasto y ver como se distribuye entre todos.
-        </div>
-
-        {/* MEMBERS */}
-        <div style={{ display: 'flex', gap: 24, marginBottom: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
-          {members.map((m, i) => {
-            const c = colors[i % colors.length]
-            const name = (m.name ?? m.user?.name ?? '?').split(' ')[0]
-            return (
-              <div key={m.id} style={{ textAlign: 'center' }}>
-                <div style={{ width: 56, height: 56, borderRadius: '50%', background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, color: c.color, margin: '0 auto 8px' }}>
-                  {name[0]}
+        {/* Miembros */}
+        <div style={{ marginBottom: 40 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.25)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 16 }}>
+            Quienes forman parte
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+            {members.map((m, i) => {
+              const c = colors[i % colors.length]
+              const name = (m.name ?? m.user?.name ?? '?').split(' ')[0]
+              return (
+                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 999, padding: '6px 14px 6px 8px' }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: c.color, flexShrink: 0 }}>
+                    {name[0]}
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{name}</span>
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', fontWeight: 500 }}>{m.defaultShare}%</span>
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', marginBottom: 2 }}>{name}</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.35)' }}>{m.defaultShare}%</div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Pilares */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[
+            { icon: '📊', title: 'Control de gastos', desc: 'Registra y divide gastos al instante' },
+            { icon: '🎯', title: 'Metas compartidas', desc: 'Ahorra juntos para lo que importa' },
+            { icon: '⚖️', title: 'Cuentas claras', desc: 'Quien debe que, siempre transparente' },
+          ].map(p => (
+            <div key={p.icon} style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 14, padding: '14px 16px' }}>
+              <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(201,242,106,.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
+                {p.icon}
               </div>
-            )
-          })}
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 2 }}>{p.title}</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.35)' }}>{p.desc}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* BOTTOM */}
-      <div style={{ padding: '0 24px 48px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <a href="/presupuesto?setup=true"
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 52, background: 'var(--green)', color: 'var(--title)', borderRadius: 'var(--r-sm)', fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
-          Configurar presupuesto
+      {/* FOOTER */}
+      <div style={{ padding: '0 28px 52px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <a href="/dashboard"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 54, background: 'var(--green)', color: 'var(--title)', borderRadius: 'var(--r-sm)', fontSize: 15, fontWeight: 800, textDecoration: 'none', letterSpacing: '-.01em' }}>
+          Empezar ahora →
         </a>
         <a href="/gastos/nuevo"
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 52, background: 'rgba(255,255,255,.08)', color: 'rgba(255,255,255,.7)', borderRadius: 'var(--r-sm)', fontSize: 15, fontWeight: 600, textDecoration: 'none' }}>
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 48, background: 'rgba(255,255,255,.06)', color: 'rgba(255,255,255,.6)', borderRadius: 'var(--r-sm)', fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
           Agregar primer gasto
-        </a>
-        <a href="/dashboard"
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 44, background: 'transparent', color: 'rgba(255,255,255,.3)', borderRadius: 'var(--r-sm)', fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>
-          Ir al dashboard
         </a>
       </div>
     </div>

@@ -21,20 +21,49 @@ export async function GET() {
   if (!member) return NextResponse.json({ error: 'No household' }, { status: 404 })
 
   const householdId = member.householdId
-  const now = new Date()
 
-  const months = [0, 1, 2].map(i => {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    return { month: d.getMonth() + 1, year: d.getFullYear() }
+  // Traer todos los gastos del hogar
+  const allExpenses = await prisma.expense.findMany({
+    where: { householdId },
+    include: { category: true, splits: true },
+    orderBy: { createdAt: 'desc' },
   })
 
-  const monthlyData = await Promise.all(months.map(async ({ month, year }) => {
+  // Detectar meses unicos con gastos
+  const monthSet = new Set<string>()
+  for (const exp of allExpenses) {
+    const d = new Date(exp.createdAt)
+    monthSet.add(`${d.getFullYear()}-${d.getMonth() + 1}`)
+  }
+
+  // Tomar los 3 meses mas recientes con gastos
+  const uniqueMonths = Array.from(monthSet)
+    .map(key => {
+      const [year, month] = key.split('-').map(Number)
+      return { year, month }
+    })
+    .sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year
+      return b.month - a.month
+    })
+    .slice(0, 3)
+
+  // Si no hay gastos usar los 3 meses actuales
+  if (uniqueMonths.length === 0) {
+    const now = new Date()
+    for (let i = 0; i < 3; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      uniqueMonths.push({ month: d.getMonth() + 1, year: d.getFullYear() })
+    }
+  }
+
+  const monthlyData = await Promise.all(uniqueMonths.map(async ({ month, year }) => {
     const start = new Date(year, month - 1, 1)
     const end = new Date(year, month, 0, 23, 59, 59)
 
-    const expenses = await prisma.expense.findMany({
-      where: { householdId, createdAt: { gte: start, lte: end } },
-      include: { category: true, splits: true },
+    const expenses = allExpenses.filter(e => {
+      const d = new Date(e.createdAt)
+      return d >= start && d <= end
     })
 
     const total = expenses.reduce((s, e) => s + e.amount, 0)
@@ -73,21 +102,19 @@ export async function GET() {
     }
   }))
 
+  // Presupuesto del mes mas reciente con gastos
+  const latestMonth = uniqueMonths[0]
   const budgets = await prisma.budget.findMany({
-    where: { householdId, month: months[0].month, year: months[0].year },
+    where: { householdId, month: latestMonth.month, year: latestMonth.year },
     include: { category: true },
   })
 
   const goals = await prisma.goal.findMany({
-  where: { householdId },
-  include: {
-    contributions: {
-      orderBy: { createdAt: 'desc' },
+    where: { householdId },
+    include: {
+      contributions: { orderBy: { createdAt: 'desc' } },
     },
-  },
-})
+  })
 
-return NextResponse.json({ monthlyData, budgets, members: member.household.members, goals })
-
-  
+  return NextResponse.json({ monthlyData, budgets, members: member.household.members, goals })
 }
