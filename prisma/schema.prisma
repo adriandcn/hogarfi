@@ -94,6 +94,7 @@ model HouseholdMember {
   name         String?  // nombre manual hasta que acepte invitación
   role         Role     @default(MEMBER)
   defaultShare Float
+  income Float? @default(0)
   joinedAt     DateTime @default(now())
 goalContributions GoalContribution[]
   household Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)

@@ -7,66 +7,72 @@ export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { name, members } = await req.json()
-
-  if (!name || !members || members.length < 1) {
-    return NextResponse.json({ error: 'Invalid data' }, { status: 400 })
-  }
-
-  const total = members.reduce((s: number, m: any) => s + m.share, 0)
-  if (Math.abs(total - 100) > 0.5) {
-    return NextResponse.json({ error: 'Shares must sum 100' }, { status: 400 })
-  }
+  const { name, members, goals = [], budgets = [] } = await req.json()
 
   const household = await prisma.household.create({
-    data: {
-      name,
-      subscription: {
-        create: {
-          plan: 'FREE',
-          status: 'TRIALING',
-          trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        },
-      },
-    },
+    data: { name },
   })
 
-  // Primer miembro = admin con cuenta
-  await prisma.householdMember.create({
-    data: {
-      householdId: household.id,
-      userId: session.user.id,
-      name: session.user.name,
-      role: 'ADMIN',
-      defaultShare: members[0].share,
-    },
-  })
+  const now = new Date()
+  const month = now.getMonth() + 1
+  const year = now.getFullYear()
 
-  // Resto de miembros sin cuenta — se unen por invitación
-  for (let i = 1; i < members.length; i++) {
+  for (let i = 0; i < members.length; i++) {
     const m = members[i]
-    if (!m.name) continue
-
     const member = await prisma.householdMember.create({
       data: {
         householdId: household.id,
-        userId: null,
+        userId: i === 0 ? session.user.id : null,
         name: m.name,
-        role: 'MEMBER',
+        role: i === 0 ? 'ADMIN' : 'MEMBER',
         defaultShare: m.share,
+        income: m.income ?? 0,
       },
     })
 
-    // Crear invitación para ese miembro
-    await prisma.invitation.create({
+    if (i > 0) {
+      await prisma.invitation.create({
+        data: {
+          householdId: household.id,
+          invitedBy: session.user.id,
+          memberId: member.id,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+      })
+    }
+  }
+
+  for (const goal of goals) {
+    const months = goal.monthlyTarget > 0 ? Math.ceil(goal.targetAmount / goal.monthlyTarget) : null
+    const deadline = months ? new Date(Date.now() + months * 30 * 24 * 60 * 60 * 1000) : null
+    await prisma.goal.create({
       data: {
         householdId: household.id,
-        invitedBy: session.user.id,
-        memberId: member.id,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        name: goal.name,
+        icon: goal.icon ?? '🎯',
+        targetAmount: goal.targetAmount,
+        monthlyTarget: goal.monthlyTarget,
+        deadline,
       },
     })
   }
 
-  return NextResponse.json({ householdId: household.id })
+  for (const budget of budgets) {
+    if (!budget.amount || budget.amount <= 0) continue
+    let category = await prisma.category.findFirst({
+      where: { householdId: household.id, name: budget.categoryName },
+    })
+    if (!category) {
+      category = await prisma.category.create({
+        data: { householdId: household.id, name: budget.categoryName, icon: budget.icon ?? '📦', color: budget.color ?? '#6b6b72' },
+      })
+    }
+    await prisma.budget.create({
+      data: { householdId: household.id, categoryId: category.id, amount: budget.amount, month, year },
+    })
+  }
+
+  const res = NextResponse.json({ householdId: household.id })
+  res.cookies.set('active_household', household.id, { httpOnly: false, maxAge: 60 * 60 * 24 * 365, path: '/' })
+  return res
 }
